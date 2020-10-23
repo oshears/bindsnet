@@ -29,7 +29,7 @@ def single(
     shape = list(datum.shape)
     datum = np.copy(datum)
     quantile = np.quantile(datum, 1 - sparsity)
-    s = np.zeros([time, *shape], device=device)
+    s = np.zeros([time, *shape])
     s[0] = np.where(datum > quantile, np.ones(shape), np.zeros(shape))
     return torch.Tensor(s).byte()
 
