@@ -5,7 +5,10 @@ import ctypes
 import timeit
 
 # apply Changes to the bindsnet package
+# OSX & Linux
 # pip install --upgrade bindsnet/
+# Windows
+# pip install --upgrade .\bindsnet\
 
 # PyTorch Multiprocessing
 # https://pytorch.org/docs/stable/notes/multiprocessing.html
