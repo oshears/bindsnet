@@ -9,7 +9,7 @@ from torchvision import models
 
 from ..learning import PostPre
 from ..network import Network
-from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes, AdaptiveLIFNodes
+from ..network.nodes import Input, IFNodes, LIFNodes, SRM0Nodes, DiehlAndCookNodes, AdaptiveLIFNodes
 from ..network.topology import Connection, LocalConnection
 
 
@@ -30,6 +30,7 @@ class TwoLayerNetwork(Network):
         nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
         reduction: Optional[callable] = None,
         norm: float = 78.4,
+        node_type: str = "LIF"
     ) -> None:
         # language=rst
         """
@@ -46,6 +47,8 @@ class TwoLayerNetwork(Network):
         :param wmax: Maximum allowed weight on ``Input`` to ``LIFNodes`` synapses.
         :param norm: ``Input`` to ``LIFNodes`` layer connection weights normalization
             constant.
+        :param node_type: ` Optional argument to specifiy the type of nodes to use in
+            the second layer.
         """
         super().__init__(dt=dt)
 
@@ -54,19 +57,49 @@ class TwoLayerNetwork(Network):
         self.dt = dt
 
         self.add_layer(Input(n=self.n_inpt, traces=True, tc_trace=20.0), name="X")
-        self.add_layer(
-            LIFNodes(
-                n=self.n_neurons,
-                traces=True,
-                rest=-65.0,
-                reset=-65.0,
-                thresh=-52.0,
-                refrac=5,
-                tc_decay=100.0,
-                tc_trace=20.0,
-            ),
-            name="Y",
-        )
+        if node_type == "IF":
+            self.add_layer(
+                IFNodes(
+                    n=self.n_neurons,
+                    traces=True,
+                    rest=-65.0,
+                    reset=-65.0,
+                    thresh=-52.0,
+                    refrac=5,
+                    tc_decay=100.0,
+                    tc_trace=20.0,
+                ),
+                name="Y",
+            )
+        elif node_type == "SRM0":
+            self.add_layer(
+                SRM0Nodes(
+                    n=self.n_neurons,
+                    traces=True,
+                    rest=-65.0,
+                    reset=-65.0,
+                    thresh=-52.0,
+                    refrac=5,
+                    tc_decay=100.0,
+                    tc_trace=20.0,
+                ),
+                name="Y",
+            )
+        else:
+            self.add_layer(
+                LIFNodes(
+                    n=self.n_neurons,
+                    traces=True,
+                    rest=-65.0,
+                    reset=-65.0,
+                    thresh=-52.0,
+                    refrac=5,
+                    tc_decay=100.0,
+                    tc_trace=20.0,
+                ),
+                name="Y",
+            )
+            
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(
