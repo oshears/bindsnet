@@ -13,7 +13,7 @@ from bindsnet import ROOT_DIR
 from bindsnet.datasets import MNIST, DataLoader
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
-from bindsnet.models import DiehlAndCook2015
+from bindsnet.models import DiehlAndCook2015v2
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_weights, get_square_assignments
 from bindsnet.analysis.plotting import (
@@ -34,7 +34,7 @@ parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_train", type=int, default=60000)
 parser.add_argument("--n_workers", type=int, default=-1)
 parser.add_argument("--update_steps", type=int, default=256)
-parser.add_argument("--exc", type=float, default=22.5)
+# parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
 parser.add_argument("--theta_plus", type=float, default=0.05)
 parser.add_argument("--time", type=int, default=100)
@@ -57,7 +57,7 @@ n_test = args.n_test
 n_train = args.n_train
 n_workers = args.n_workers
 update_steps = args.update_steps
-exc = args.exc
+# exc = args.exc
 inh = args.inh
 theta_plus = args.theta_plus
 time = args.time
@@ -92,10 +92,10 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 
 # Build network.
-network = DiehlAndCook2015(
+network = DiehlAndCook2015v2(
     n_inpt=784,
     n_neurons=n_neurons,
-    exc=exc,
+    # exc=exc,
     inh=inh,
     dt=dt,
     norm=78.4,
@@ -129,10 +129,10 @@ rates = torch.zeros((n_neurons, n_classes), device=device)
 accuracy = {"all": [], "proportion": []}
 
 # Voltage recording for excitatory and inhibitory layers.
-exc_voltage_monitor = Monitor(network.layers["Ae"], ["v"], time=int(time / dt))
-inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=int(time / dt))
+exc_voltage_monitor = Monitor(network.layers["Y"], ["v"], time=int(time / dt))
+# inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=int(time / dt))
 network.add_monitor(exc_voltage_monitor, name="exc_voltage")
-network.add_monitor(inh_voltage_monitor, name="inh_voltage")
+# network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 
 # Set up monitors for spikes and voltages
 spikes = {}
@@ -248,7 +248,7 @@ for epoch in range(n_epochs):
         network.run(inputs=inputs, time=time, input_time_dim=1)
 
         # Add to spikes recording.
-        s = spikes["Ae"].get("s").permute((1, 0, 2))
+        s = spikes["Y"].get("s").permute((1, 0, 2))
         spike_record[
             (step * batch_size)
             % update_interval : (step * batch_size % update_interval)
@@ -257,13 +257,13 @@ for epoch in range(n_epochs):
 
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")
-        inh_voltages = inh_voltage_monitor.get("v")
+        # inh_voltages = inh_voltage_monitor.get("v")
 
         # Optionally plot various simulation information.
         if plot:
             image = batch["image"][:, 0].view(28, 28)
             inpt = inputs["X"][:, 0].view(time, 784).sum(0).view(28, 28)
-            input_exc_weights = network.connections[("X", "Ae")].w
+            input_exc_weights = network.connections[("X", "Y")].w
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
             )
@@ -271,7 +271,7 @@ for epoch in range(n_epochs):
             spikes_ = {
                 layer: spikes[layer].get("s")[:, 0].contiguous() for layer in spikes
             }
-            voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
+            voltages = {"Y": exc_voltages}
 
             inpt_axes, inpt_ims = plot_input(
                 image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
@@ -336,7 +336,7 @@ for step, batch in enumerate(test_dataset):
     network.run(inputs=inputs, time=time, input_time_dim=1)
 
     # Add to spikes recording.
-    spike_record = spikes["Ae"].get("s").permute((1, 0, 2))
+    spike_record = spikes["Y"].get("s").permute((1, 0, 2))
 
     # Convert the array of labels into a tensor
     label_tensor = torch.tensor(batch["label"], device=device)
