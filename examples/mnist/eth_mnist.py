@@ -161,6 +161,7 @@ voltage_axes, voltage_ims = None, None
 print("\nBegin training.\n")
 start = t()
 labels = []
+epoch=0
 for epoch in range(n_epochs):
 
     if epoch % progress_interval == 0:
