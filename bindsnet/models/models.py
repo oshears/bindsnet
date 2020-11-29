@@ -141,6 +141,7 @@ class DiehlAndCook2015(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -173,6 +174,7 @@ class DiehlAndCook2015(Network):
         self.exc = exc
         self.inh = inh
         self.dt = dt
+        self.batch_size = batch_size
 
         # Layers
         input_layer = Input(
@@ -258,6 +260,7 @@ class DiehlAndCook2015v2(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -288,6 +291,7 @@ class DiehlAndCook2015v2(Network):
         self.n_neurons = n_neurons
         self.inh = inh
         self.dt = dt
+        self.batch_size = batch_size
 
         input_layer = Input(
             n=self.n_inpt, shape=self.inpt_shape, traces=True, tc_trace=20.0
