@@ -289,8 +289,8 @@ for epoch in range(n_epochs):
 
         network.reset_state_variables()  # Reset state variables.
 
-        if step % update_steps == 0 and step > 0:
-            break
+        # if step % update_steps == 0 and step > 0:
+        #     break
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
