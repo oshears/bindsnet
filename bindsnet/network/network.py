@@ -458,11 +458,22 @@ class AsynchronousNetwork(Network):
         else:
             self.n_threads = n_threads
 
+        # Set environment variables
+        os.environ['OMP_NUM_THREADS'] = '1'
+        os.environ['MKL_NUM_THREADS'] = '1'
+        torch.set_num_threads(self.n_threads+1)
+
         self.share_memory()
 
 
     def set_n_threads(self,n_threads):
         self.n_threads = n_threads
+        torch.set_num_threads(n_threads+1)
+
+    def wait_for_next_thread(self,processes):
+        while len(processes) > self.n_threads:
+            processes[0].join()
+            del processes[0]
 
     def run(
         self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, threadCount: int = 1, **kwargs
@@ -574,41 +585,26 @@ class AsynchronousNetwork(Network):
                 current_inputs.update(self._get_inputs())
 
             # run node layer updates
-            print("Layer Updates")
             processes = []
             for l in self.layers:
-                while len(processes) > self.n_threads:
-                    processes[0].join()
-                    del processes[0]
+                self.wait_for_next_thread(processes)
                 p = mp.Process(target=self._layer_evaluation, args=(l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps))
                 p.start()
                 processes.append(p)
             
             for p in processes:
-                print("Waiting for process:",p.name)
-                print("Processes remaining:",len(processes))
-                print("Process List:",processes)
                 p.join()
-                print("Joined:",p.name)
 
             # Run synapse updates.
-            print("Synapse Updates")
             processes = []
             for c in self.connections:
-                while len(processes) > self.n_threads:
-                    print("Too many threads currently running, must wait...")
-                    processes[0].join()
-                    del processes[0]
+                self.wait_for_next_thread(processes)
                 p = mp.Process(target=self._connection_update, args=(c,masks,kwargs))
                 p.start()
                 processes.append(p)
 
             for p in processes:
-                print("Waiting for process:",p.name)
-                print("Processes remaining:",len(processes))
-                print("Process List:",processes)
                 p.join()
-                print("Joined:",p.name)
 
             # Get input to all layers.
             # OYS 11/28/20 is this necessary? Seems like it gets negated upon the next loop
@@ -618,26 +614,18 @@ class AsynchronousNetwork(Network):
             print("Monitor Updates")
             processes = []
             for m in self.monitors:
-                while len(processes) > self.n_threads:
-                    processes[0].join()
-                    del processes[0]
+                self.wait_for_next_thread(processes)
                 p = mp.Process(target=self._monitor_record, args=(m))
                 p.start()
                 processes.append(p)
 
             for p in processes:
-                print("Waiting for process:",p.name)
-                print("Processes remaining:",len(processes))
-                print("Process List:",processes)
                 p.join()
-                print("Joined:",p.name)
 
         # Re-normalize connections.
         processes = []
         for c in self.connections:
-            while len(processes) > self.n_threads:
-                processes[0].join()
-                del processes[0]
+            self.wait_for_next_thread(processes)
             p = mp.Process(target=self._connection_normalize, args=(c))
             p.start()
             processes.append(p)
@@ -647,11 +635,9 @@ class AsynchronousNetwork(Network):
             
 
     def _connection_update(self,c,masks,kwargs):
-        print("Updating Synapse",c)
         self.connections[c].update(
             mask=masks.get(c, None), learning=self.learning, **kwargs
         )
-        print("Done Updating Synapse",c)
 
     def _monitor_record(self,m):
         self.monitors[m].record()
