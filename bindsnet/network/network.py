@@ -9,6 +9,8 @@ from .nodes import Nodes
 from .topology import AbstractConnection
 from ..learning.reward import AbstractReward
 
+import os
+import time as timeModule
 
 def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
     # language=rst
@@ -431,6 +433,37 @@ class Network(torch.nn.Module):
 
 class AsynchronousNetwork(Network):
 
+    def __init__(
+        self,
+        dt: float = 1.0,
+        batch_size: int = 1,
+        learning: bool = True,
+        reward_fn: Optional[Type[AbstractReward]] = None,
+        n_threads = -1,
+    ) -> None:
+        # language=rst
+        """
+        Initializes network object.
+
+        :param dt: Simulation timestep.
+        :param batch_size: Mini-batch size.
+        :param learning: Whether to allow connection updates. True by default.
+        :param reward_fn: Optional class allowing for modification of reward in case of
+            reward-modulated learning.
+        """
+        super().__init__(dt,batch_size,learning,reward_fn)
+
+        if n_threads == -1:
+            self.n_threads = os.cpu_count()
+        else:
+            self.n_threads = n_threads
+
+        self.share_memory()
+
+
+    def set_n_threads(self,n_threads):
+        self.n_threads = n_threads
+
     def run(
         self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, threadCount: int = 1, **kwargs
     ) -> None:
@@ -491,6 +524,8 @@ class AsynchronousNetwork(Network):
             plt.title('Input spiking')
             plt.show()
         """
+        print("Running Asynchronous Network")
+
         # Parse keyword arguments.
         clamps = kwargs.get("clamp", {})
         unclamps = kwargs.get("unclamp", {})
@@ -538,32 +573,93 @@ class AsynchronousNetwork(Network):
             if not one_step:
                 current_inputs.update(self._get_inputs())
 
-            for l in self.layers:
-                p = mp.Process(target=self._layer_evaluation, args=(self,l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps))
-            
+            # run node layer updates
+            print("Layer Updates")
             processes = []
+            for l in self.layers:
+                while len(processes) > self.n_threads:
+                    processes[0].join()
+                    del processes[0]
+                p = mp.Process(target=self._layer_evaluation, args=(l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps))
+                p.start()
+                processes.append(p)
+            
             for p in processes:
+                print("Waiting for process:",p.name)
+                print("Processes remaining:",len(processes))
+                print("Process List:",processes)
                 p.join()
+                print("Joined:",p.name)
 
             # Run synapse updates.
+            print("Synapse Updates")
+            processes = []
             for c in self.connections:
-                self.connections[c].update(
-                    mask=masks.get(c, None), learning=self.learning, **kwargs
-                )
+                while len(processes) > self.n_threads:
+                    print("Too many threads currently running, must wait...")
+                    processes[0].join()
+                    del processes[0]
+                p = mp.Process(target=self._connection_update, args=(c,masks,kwargs))
+                p.start()
+                processes.append(p)
+
+            for p in processes:
+                print("Waiting for process:",p.name)
+                print("Processes remaining:",len(processes))
+                print("Process List:",processes)
+                p.join()
+                print("Joined:",p.name)
 
             # Get input to all layers.
             # OYS 11/28/20 is this necessary? Seems like it gets negated upon the next loop
             current_inputs.update(self._get_inputs())
 
             # Record state variables of interest.
+            print("Monitor Updates")
+            processes = []
             for m in self.monitors:
-                self.monitors[m].record()
+                while len(processes) > self.n_threads:
+                    processes[0].join()
+                    del processes[0]
+                p = mp.Process(target=self._monitor_record, args=(m))
+                p.start()
+                processes.append(p)
+
+            for p in processes:
+                print("Waiting for process:",p.name)
+                print("Processes remaining:",len(processes))
+                print("Process List:",processes)
+                p.join()
+                print("Joined:",p.name)
 
         # Re-normalize connections.
+        processes = []
         for c in self.connections:
-            self.connections[c].normalize()
+            while len(processes) > self.n_threads:
+                processes[0].join()
+                del processes[0]
+            p = mp.Process(target=self._connection_normalize, args=(c))
+            p.start()
+            processes.append(p)
 
-    def _layer_evaluation(self,l:str,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps):
+        for p in processes:
+            p.join()
+            
+
+    def _connection_update(self,c,masks,kwargs):
+        print("Updating Synapse",c)
+        self.connections[c].update(
+            mask=masks.get(c, None), learning=self.learning, **kwargs
+        )
+        print("Done Updating Synapse",c)
+
+    def _monitor_record(self,m):
+        self.monitors[m].record()
+
+    def _connection_normalize(self,c):
+        self.connections[c].normalize()
+
+    def _layer_evaluation(self,l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps):
         # Update each layer of nodes.
         if l in inputs:
             if l in current_inputs:
@@ -603,4 +699,3 @@ class AsynchronousNetwork(Network):
                 self.layers[l].v += inject_v
             else:
                 self.layers[l].v += inject_v[t]
-        return
