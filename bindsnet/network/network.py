@@ -480,7 +480,7 @@ class AsynchronousNetwork(Network):
             del processes[0]
 
     def run(
-        self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, threadCount: int = 1, **kwargs
+        self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
     ) -> None:
         # language=rst
         """
