@@ -31,43 +31,63 @@ class Network():
 
 class AsyncNetwork(Network):
 
-    def __init__(self,layers):
+    def __init__(self,layers,n_workers):
         super().__init__(layers)
 
         self.x.share_memory_()
         self.y.share_memory_()
         self.count.share_memory_()
+        self.n_workers = n_workers
 
-    def run(self,time):
+        #self.pool = mp.Pool(processes=n_workers)
+
+    def run(self,time,overheadTimes):
         self.count[0] = 0
         for step in range(time):
-            mp.spawn(fn=self._threadRun, args=(), nprocs=self.layers, join=True)
-                
-    
-    def _threadRun(self,i):
+            startTime = timeModule.time_ns()
+            mp.spawn(fn=self._threadRun, args=(startTime,overheadTimes,), nprocs=self.layers, join=True)
+
+    def _threadRun(self,i,startTime,overheadTimes,):
+        initOverheadTime = timeModule.time_ns() - startTime
+        overheadTimes[i] = initOverheadTime
         # start = timeModule.time_ns()
         a = torch.bmm(self.x,self.y)
         # total = timeModule.time_ns() - start
         # print("\tTime for Layer",i,"=",total)
         self.count += 1
 
+    def runPool(self,time,overheadTimes):
+        pool = mp.Pool(processes=self.n_workers)
 
-    def runExclusive(self,time):
         self.count[0] = 0
         for step in range(time):
-            mp.spawn(fn=self._threadExclusiveRun, args=(self.x,self.y), nprocs=self.layers, join=True)
+            startTime = timeModule.time_ns()
+            tasks = [pool.apply_async(self._threadRun,args=(i,startTime,overheadTimes)) for i in range(self.layers)]
+            for task in tasks:
+                task.get()
+            
+        pool.close()
+        pool.join()
+
+    def runExclusive(self,time,overheadTimes,):
+        self.count[0] = 0
+        for step in range(time):
+            startTime = timeModule.time_ns()
+            mp.spawn(fn=self._threadExclusiveRun, args=(self.x,self.y,self.count,startTime,overheadTimes,), nprocs=self.layers, join=True)
                 
     
-    def _threadExclusiveRun(self,i,x,y):
+    def _threadExclusiveRun(self,i,x,y,count,startTime,overheadTimes,):
+        initOverheadTime = timeModule.time_ns() - startTime
+        overheadTimes[i] = initOverheadTime
         # start = timeModule.time_ns()
         a = torch.bmm(x,y)
         # total = timeModule.time_ns() - start
         # print("\tTime for Layer",i,"=",total)
-        count = 1
+        count += 1
 
-
-
-def runThread(i,x,y,count):
+def runThread(i,x,y,count,startTime,overheadTimes):
+    initOverheadTime = timeModule.time_ns() - startTime
+    overheadTimes[i] = initOverheadTime
     # start = timeModule.time_ns()
     a = torch.bmm(x,y)
     # total = timeModule.time_ns() - start
@@ -82,7 +102,8 @@ class MyManager(BaseManager):
 if __name__ == "__main__":
 
     #torch.set_num_threads(17)
-    mp.set_start_method('spawn')
+    # mp.set_start_method('spawn',force=True)
+    mp.set_start_method('fork',force=True)
 
     # start manager
     MyManager.register('Network',Network)
@@ -90,40 +111,67 @@ if __name__ == "__main__":
     manager = MyManager()
     manager.start()
 
+    dictManager = Manager()
+
     threads = 16
+    layers = 16
     MAX_TIME = 5
 
-    network0 = Network(threads)
-    network1 = manager.AsyncNetwork(threads)
+    
 
     x = torch.rand(10000,100,100)
     y = torch.rand(10000,100,100)
 
+    
+
+    network0 = Network(layers)
+    network1 = manager.AsyncNetwork(layers,threads)
+
     for time in range(1,MAX_TIME+1):
 
-        start = timeModule.time_ns()
+        
+        startTime = timeModule.time_ns()
         network0.run(time)
-        t0 = timeModule.time_ns() - start
-        print("N0 Count:\t",network0.getCount())
+        t0 = timeModule.time_ns() - startTime
+        #print("N0 Count:\t",network0.getCount())
 
-        start = timeModule.time_ns()
-        network1.run(time)
-        t1 = timeModule.time_ns() - start
-        print("N1 Count:\t",network1.getCount())
+        overheadTimes = dictManager.dict()
+        startTime = timeModule.time_ns()
+        network1.run(time,overheadTimes)
+        t1 = timeModule.time_ns() - startTime
+        #print("N1 Count:\t",network1.getCount())
+        #print(overheadTimes)
 
+        overheadTimes = dictManager.dict()
         start = timeModule.time_ns()
-        network1.runExclusive(time)
-        t2 = timeModule.time_ns() - start
-        print("N2 Count:\t",network1.getCount())
+        network1.runExclusive(time,overheadTimes)
+        t2 = timeModule.time_ns() - startTime
+        #print("N2 Count:\t",network1.getCount())
+        #print(overheadTimes)
 
         count = torch.zeros(1)
-        start = timeModule.time_ns()
+        overheadTimes = dictManager.dict()
         for step in range(time):
-            mp.spawn(fn=runThread, args=(x,y,count), nprocs=threads, join=True)
-        t3 = timeModule.time_ns() - start
-        print("N3 Count:\t",count)
+            startTime = timeModule.time_ns()
+            mp.spawn(fn=runThread, args=(x,y,count,startTime,overheadTimes), nprocs=threads, join=True)
+        t3 = timeModule.time_ns() - startTime
+        #print("N3 Count:\t",count)
+        #print(overheadTimes)
+
+        overheadTimes = dictManager.dict()
+        startTime = timeModule.time_ns()
+        network1.runPool(time,overheadTimes)
+        t4 = timeModule.time_ns() - startTime
+        #print("N4 Count:\t",network1.getCount())
+        #print(overheadTimes)
 
         print("Time:\t",time,"\tSpeedup(1):\t",t0/t1)
         print("Time:\t",time,"\tSpeedup(2):\t",t0/t2)
         print("Time:\t",time,"\tSpeedup(3):\t",t0/t3)
+        print("Time:\t",time,"\tSpeedup(4):\t",t0/t4)
         print("\n")
+
+
+        # Better Performance When:
+        # - Threads Can be Reused (not reinitialized)
+        # - takes about 1 millisecond to get a thread started in the pool

@@ -62,7 +62,8 @@ def run(i,x,iters,ctr,counterManaged):
 if __name__ == "__main__":
 
     #torch.set_num_threads(17)
-    mp.set_start_method('spawn')
+    # mp.set_start_method('spawn')
+    mp.set_start_method('fork')
 
     # start manager
     MyManager.register('Counter',Counter)

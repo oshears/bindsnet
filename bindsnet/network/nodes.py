@@ -369,7 +369,6 @@ class IFNodes(Nodes):
         self.lbound = lbound  # Lower bound of voltage.
 
     def forward(self, x: torch.Tensor) -> None:
-        subTime = timeModule.time()
         # language=rst
         """
         Runs a single simulation step.
@@ -394,7 +393,6 @@ class IFNodes(Nodes):
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
 
         super().forward(x)
-        print("[",self,"] Forward Done in: ",timeModule.time() - subTime)
 
     def reset_state_variables(self) -> None:
         # language=rst

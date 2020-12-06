@@ -345,8 +345,6 @@ class Network(torch.nn.Module):
             if not one_step:
                 current_inputs.update(self._get_inputs())
             
-            start = timeModule.time()
-
             for l in self.layers:
                 # Update each layer of nodes.
                 if l in inputs:
@@ -387,8 +385,6 @@ class Network(torch.nn.Module):
                         self.layers[l].v += inject_v
                     else:
                         self.layers[l].v += inject_v[t]
-
-            print("Layer Updates Complete in :",timeModule.time() - start)
 
             # Run synapse updates.
             for c in self.connections:
@@ -580,6 +576,8 @@ class AsynchronousNetwork(Network):
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
+        pool = mp.Pool(processes=self.n_threads)
+
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
             #print("Time Step:",t,"/",timesteps)
@@ -587,10 +585,15 @@ class AsynchronousNetwork(Network):
             current_inputs = {}
             if not one_step:
                 current_inputs.update(self._get_inputs())
-
+            
             # run node layer updates
             start = timeModule.time()
-            mp.spawn(fn=self._layer_evaluation, args=(list(self.layers.keys()),inputs,current_inputs,t,one_step,injects_v,clamps,unclamps,), nprocs=len(self.layers), join=True)
+            #mp.spawn(fn=self._layer_evaluation, args=(list(self.layers.keys()),inputs,current_inputs,t,one_step,injects_v,clamps,unclamps,), nprocs=len(self.layers), join=True)
+            # print("Starting Layer Update")
+            tasks = [pool.apply_async(self._layer_evaluation,args=(l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps,start,)) for l in self.layers]
+            for task in tasks:
+                task.get()
+            # print("Done w/ Layer Update:",task.get())
             # processes = []
             # for l in self.layers:
             #     self.wait_for_next_thread(processes)
@@ -600,11 +603,15 @@ class AsynchronousNetwork(Network):
             
             # for p in processes:
             #     p.join()
-            print("Layer Updates Complete in :",timeModule.time() - start)
-
+            # print("Layer Updates Complete in :",timeModule.time() - start)
 
             # Run synapse updates.
-            mp.spawn(fn=self._connection_update, args=(list(self.connections.keys()),masks,kwargs,), nprocs=len(self.connections), join=True)
+            #mp.spawn(fn=self._connection_update, args=(list(self.connections.keys()),masks,kwargs,), nprocs=len(self.connections), join=True)
+            tasks = [pool.apply_async(self._connection_update,args=(c,masks,kwargs,)) for c in self.connections]
+            for task in tasks:
+                task.get()
+                # print("Done w/ Connection Update:",task)
+            
             # processes = []
             # for c in self.connections:
             #     self.wait_for_next_thread(processes)
@@ -620,7 +627,11 @@ class AsynchronousNetwork(Network):
             current_inputs.update(self._get_inputs())
 
             # Record state variables of interest.
-            mp.spawn(fn=self._monitor_record, args=(list(self.monitors.keys()),), nprocs=len(self.monitors), join=True)
+            # mp.spawn(fn=self._monitor_record, args=(list(self.monitors.keys()),), nprocs=len(self.monitors), join=True)
+            tasks = [pool.apply_async(self._monitor_record,args=(m,)) for m in self.monitors]
+            for task in tasks:
+                task.get()
+            
             # processes = []
             # for m in self.monitors:
             #     self.wait_for_next_thread(processes)
@@ -632,7 +643,12 @@ class AsynchronousNetwork(Network):
             #     p.join()
 
         # Re-normalize connections.
-        mp.spawn(fn=self._connection_normalize, args=(list(self.connections.keys()),), nprocs=len(self.connections), join=True)
+        # mp.spawn(fn=self._connection_normalize, args=(list(self.connections.keys()),), nprocs=len(self.connections), join=True)
+        tasks = [pool.apply_async(self._connection_normalize,args=(c,)) for c in self.connections]
+        for task in tasks:
+            task.get()
+        pool.close()
+        pool.join()
         # processes = []
         # for c in self.connections:
         #     self.wait_for_next_thread(processes)
@@ -644,22 +660,24 @@ class AsynchronousNetwork(Network):
         #     p.join()
             
 
-    def _connection_update(self,i,list_connections,masks,kwargs):
-        c = list_connections[i]
+    def _connection_update(self,c,masks,kwargs):
+        # c = list_connections[i]
         self.connections[c].update(
             mask=masks.get(c, None), learning=self.learning, **kwargs
         )
 
-    def _monitor_record(self,i,list_monitors):
-        m = list_monitors[i]
+    def _monitor_record(self,m):
+        # m = list_monitors[i]
         self.monitors[m].record()
 
-    def _connection_normalize(self,i,list_connections):
-        c = list_connections[i]
+    def _connection_normalize(self,c):
+        # c = list_connections[i]
         self.connections[c].normalize()
 
-    def _layer_evaluation(self,i,list_layers,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps):
-        l = list_layers[i]
+    def _layer_evaluation(self,l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps,startTime):
+        overheadTime = timeModule.time() - startTime
+        #print("Overhead Time:",overheadTime)
+        # l = list_layers[i]
         # Update each layer of nodes.
         if l in inputs:
             if l in current_inputs:
