@@ -14,21 +14,18 @@ class Network():
         self.x = torch.rand(10000,100,100)
         self.y = torch.rand(10000,100,100)
         self.count = torch.zeros(1)
-
         self.layers = layers
 
     def run(self,time):
         self.count[0] = 0
         for step in range(time):
             for layer in range(self.layers):
-                #start = timeModule.time_ns()
+                # start = timeModule.time_ns()
                 a = torch.bmm(self.x,self.y)
-                #total = timeModule.time_ns() - start
-                #print("Time for Layer",layer,"=",total)
+                # total = timeModule.time_ns() - start
+                # print("\tTime for Layer",layer,"=",total)
                 self.count += 1
 
-                
-    
     def getCount(self):
         return self.count
 
@@ -48,10 +45,10 @@ class AsyncNetwork(Network):
                 
     
     def _threadRun(self,i):
-        #start = timeModule.time_ns()
+        # start = timeModule.time_ns()
         a = torch.bmm(self.x,self.y)
-        #total = timeModule.time_ns() - start
-        #print("Time for Layer",i,"=",total)
+        # total = timeModule.time_ns() - start
+        # print("\tTime for Layer",i,"=",total)
         self.count += 1
 
 
@@ -62,12 +59,20 @@ class AsyncNetwork(Network):
                 
     
     def _threadExclusiveRun(self,i,x,y):
-        
-        #start = timeModule.time_ns()
+        # start = timeModule.time_ns()
         a = torch.bmm(x,y)
-        #total = timeModule.time_ns() - start
-        #print("Time for Layer",i,"=",total)
+        # total = timeModule.time_ns() - start
+        # print("\tTime for Layer",i,"=",total)
         count = 1
+
+
+
+def runThread(i,x,y,count):
+    # start = timeModule.time_ns()
+    a = torch.bmm(x,y)
+    # total = timeModule.time_ns() - start
+    # print("\tTime for Layer",i,"=",total)
+    count += 1
 
 
 class MyManager(BaseManager):
@@ -86,27 +91,39 @@ if __name__ == "__main__":
     manager.start()
 
     threads = 16
-    MAX_TIME = 3
+    MAX_TIME = 5
 
     network0 = Network(threads)
     network1 = manager.AsyncNetwork(threads)
+
+    x = torch.rand(10000,100,100)
+    y = torch.rand(10000,100,100)
 
     for time in range(1,MAX_TIME+1):
 
         start = timeModule.time_ns()
         network0.run(time)
         t0 = timeModule.time_ns() - start
-        #print("N0 Count:\t",network0.getCount())
+        print("N0 Count:\t",network0.getCount())
 
         start = timeModule.time_ns()
         network1.run(time)
         t1 = timeModule.time_ns() - start
-        #print("N1 Count:\t",network1.getCount())
+        print("N1 Count:\t",network1.getCount())
 
         start = timeModule.time_ns()
         network1.runExclusive(time)
         t2 = timeModule.time_ns() - start
-        #print("N1 Count:\t",network1.getCount())
+        print("N2 Count:\t",network1.getCount())
+
+        count = torch.zeros(1)
+        start = timeModule.time_ns()
+        for step in range(time):
+            mp.spawn(fn=runThread, args=(x,y,count), nprocs=threads, join=True)
+        t3 = timeModule.time_ns() - start
+        print("N3 Count:\t",count)
 
         print("Time:\t",time,"\tSpeedup(1):\t",t0/t1)
         print("Time:\t",time,"\tSpeedup(2):\t",t0/t2)
+        print("Time:\t",time,"\tSpeedup(3):\t",t0/t3)
+        print("\n")
