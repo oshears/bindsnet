@@ -184,10 +184,6 @@ class PostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0]:
-            print("Performing MM")
-            print(torch.mm(source_s[0],target_x[0]))
-            print("Finished MM")
-            # print(torch.bmm(source_s[0][0],target_x))
             update = self.reduction(torch.bmm(source_s, target_x), dim=0)
             self.connection.w -= self.nu[0] * update
 
