@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", type=str, default="cpu")    
     parser.add_argument("--n_threads", type=int, default=0)
-    parser.add_argument("--recurrent", type=bool, default=False)
+    parser.add_argument("--recurrent", dest='recurrent', default=False, action='store_true')
     parser.add_argument("--n_neurons_per", type=int, default=100)
     parser.add_argument("--n_layers", type=int, default=3)
 
