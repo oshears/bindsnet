@@ -70,11 +70,11 @@ def main(device,n_threads,n_layers,n_neurons_per,recurrent):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device", type=str, default="'cpu'")    
-    parser.add_argument("--n_threads", type=str, default="-1")
-    parser.add_argument("--recurrent", type=str, default="False")
-    parser.add_argument("--n_neurons_per", type=str, default="100")
-    parser.add_argument("--n_layers", type=str, default="3")
+    parser.add_argument("--device", type=str, default="cpu")    
+    parser.add_argument("--n_threads", type=int, default=0)
+    parser.add_argument("--recurrent", type=bool, default=False)
+    parser.add_argument("--n_neurons_per", type=int, default=100)
+    parser.add_argument("--n_layers", type=int, default=3)
 
     args = parser.parse_args()
 
@@ -85,13 +85,13 @@ if __name__ == '__main__':
     n_layers = args.n_layers
 
     setup = "from __main__ import main\n"
-    setup += "device = "+device+"\n"
-    setup += "n_threads = "+n_threads+"\n"
-    setup += "recurrent = "+recurrent+"\n"
-    setup += "n_neurons_per = "+n_neurons_per+"\n"
-    setup += "n_layers = "+n_layers+"\n"
+    setup += "device = '"       + str(device)+"'\n"
+    setup += "n_threads = "     + str(n_threads)+"\n"
+    setup += "recurrent = "     + str(recurrent)+"\n"
+    setup += "n_neurons_per = " + str(n_neurons_per)+"\n"
+    setup += "n_layers = "      + str(n_layers)+"\n"
 
     task = "main(device,n_threads,recurrent,n_neurons_per,n_layers)"
 
     t = timeit.timeit(task,setup=setup,number=1)
-    print("Execution Time:",t)
+    print("Device:",device,"  Threads:",n_threads,"  Neurons:",n_neurons_per,"  Layers:",n_layers,"  Recurrent:",recurrent,"  Execution Time:",t)
