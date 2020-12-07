@@ -53,17 +53,12 @@ def constructNetwork(network:Network,layers:int,nodes:int,recurrent:bool,time:in
 def main(device,n_threads,n_layers,n_neurons_per,recurrent):
 
     # SNN timesteps
-    time = 250
+    time = 1000
 
     network = Network()
 
-    torchDevice = device
-
     if device == "gpu":
-        torchDevice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         network.to("cuda")
-    
-    
     
     constructNetwork(network,n_layers,n_neurons_per,recurrent,time)
 

@@ -1,13 +1,69 @@
 #!/usr/bin/bash
 
-python batch_eth_mnist.prof benchmark.py --device cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 1 --n_layers 1000 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 1 --n_layers 1000 --n_neurons_per 1000 --recurrent True
 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
-# python -m cProfile -o batch_eth_mnist.prof benchmark.py --cpu --n_threads 1 --n_connections_per 1 --n_neurons_per 100 --n_layers=100 
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 4 --n_layers 1000 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 4 --n_layers 1000 --n_neurons_per 1000 --recurrent True
+
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 8 --n_layers 1000 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 8 --n_layers 1000 --n_neurons_per 1000 --recurrent True
+
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device cpu --n_threads 16 --n_layers 1000 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 100 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 100 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 1000 --n_neurons_per 100 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 1000 --n_neurons_per 1000 --recurrent False
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 100 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 100 --n_neurons_per 1000 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 1000 --n_neurons_per 100 --recurrent True
+python benchmark_cpu_t1__.prof benchmark.py --device gpu --n_threads 16 --n_layers 1000 --n_neurons_per 1000 --recurrent True
