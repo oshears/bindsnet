@@ -51,17 +51,27 @@ def constructNetwork(network:Network,layers:int,nodes:int,recurrent:bool,time:in
 
 
 def main(device,n_threads,n_layers,n_neurons_per,recurrent):
-    network = Network()
-    
+
     # SNN timesteps
     time = 250
 
+    network = Network()
+
+    torchDevice = device
+
+    if device == "gpu":
+        torchDevice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        network.to("cuda")
+    
+    
+    
     constructNetwork(network,n_layers,n_neurons_per,recurrent,time)
 
     if n_threads > 0:
-        network.asyncRun(inputs={"X":torch.rand((time,n_neurons_per))},n_threads=n_threads,time=time)
+        torch.set_num_threads(n_threads)
+        network.asyncRun(inputs={"X":torch.rand((time,n_neurons_per),device=device)},n_threads=n_threads,time=time)
     else:
-        network.run(inputs={"X":torch.rand((time,n_neurons_per))},time=time)
+        network.run(inputs={"X":torch.rand((time,n_neurons_per),device=device)},time=time)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
