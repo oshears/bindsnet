@@ -34,7 +34,7 @@ def constructNetwork(network:Network,layers,time,inputs,nodes):
             network.add_monitor(Monitor(network.layers["Y"+str(i-1)], ["v","s"], time=time),name="Y"+str(i))
 
 def configAndRun(network):
-    time = 10
+    time = 250
     layers = 16
     inputs = 724
     nodes = 1000
@@ -52,10 +52,10 @@ def asynchronousRun():
     configAndRun(network)
 
 if __name__ == '__main__':
-    mp.set_start_method('fork',force=True)
+    # mp.set_start_method('fork',force=True)
 
     # spawn for pools, not all objects shared
-    # mp.set_start_method('spawn',force=True) 
+    mp.set_start_method('spawn',force=True) 
 
     # setup = """from __main__ import standardRun; from __main__ import asynchronousRun"""
 

@@ -5,6 +5,7 @@ from multiprocessing.managers import BaseManager
 
 import time as timeModule
 
+import threading
 
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -56,6 +57,19 @@ class AsyncNetwork(Network):
         for step in range(time):
             startTime = timeModule.time_ns()
             mp.spawn(fn=self._threadRun, args=(startTime,overheadTimes,), nprocs=self.layers, join=True)
+
+    def runThread(self,time,overheadTimes):
+        self.count[0] = 0
+        for step in range(time):
+            startTime = timeModule.time_ns()
+            threads = []
+            for l in range(self.layers):
+                t = threading.Thread(target=self._threadRun,args=(l,startTime,overheadTimes))
+                t.start()
+                threads.append(t) 
+            
+            for t in threads:
+                t.join()
 
     def _threadRun(self,i,startTime,overheadTimes,):
         initOverheadTime = timeModule.time_ns() - startTime
@@ -112,8 +126,8 @@ class MyManager(BaseManager):
 if __name__ == "__main__":
 
     #torch.set_num_threads(17)
-    # mp.set_start_method('spawn',force=True)
-    mp.set_start_method('fork',force=True)
+    mp.set_start_method('spawn',force=True)
+    # mp.set_start_method('fork',force=True)
 
     # start manager
     MyManager.register('Network',Network)
@@ -175,10 +189,18 @@ if __name__ == "__main__":
         #print("N4 Count:\t",network1.getCount())
         #print(overheadTimes)
 
+        overheadTimes = dictManager.dict()
+        startTime = timeModule.time_ns()
+        network1.runThread(time,overheadTimes)
+        t5 = timeModule.time_ns() - startTime
+        #print("N4 Count:\t",network1.getCount())
+        #print(overheadTimes)
+
         print("Time:\t",time,"\tSpeedup(1):\t",t0/t1)
         print("Time:\t",time,"\tSpeedup(2):\t",t0/t2)
         print("Time:\t",time,"\tSpeedup(3):\t",t0/t3)
         print("Time:\t",time,"\tSpeedup(4):\t",t0/t4)
+        print("Time:\t",time,"\tSpeedup(5):\t",t0/t5)
         print("-"*100)
 
 
