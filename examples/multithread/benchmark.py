@@ -54,16 +54,19 @@ def main(device,n_threads,n_layers,n_neurons_per,recurrent):
 
     network = Network()
 
+    torchDevice = device
+
     if device == "gpu":
         network.to("cuda")
+        torchDevice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     constructNetwork(network,n_layers,n_neurons_per,recurrent,time)
 
     if n_threads > 0:
         torch.set_num_threads(n_threads)
-        network.asyncRun(inputs={"X":torch.rand((time,n_neurons_per),device=device)},n_threads=n_threads,time=time)
+        network.asyncRun(inputs={"X":torch.rand((time,n_neurons_per),device=torchDevice)},n_threads=n_threads,time=time)
     else:
-        network.run(inputs={"X":torch.rand((time,n_neurons_per),device=device)},time=time)
+        network.run(inputs={"X":torch.rand((time,n_neurons_per),device=torchDevice)},time=time)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
