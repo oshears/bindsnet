@@ -57,14 +57,17 @@ if __name__ == '__main__':
     # spawn for pools, not all objects shared
     # mp.set_start_method('spawn',force=True) 
 
-    setup = """from __main__ import standardRun; from __main__ import asynchronousRun"""
+    # setup = """from __main__ import standardRun; from __main__ import asynchronousRun"""
 
-    print("1 Thread Benchmark")
-    t0 = timeit.timeit("standardRun()",setup=setup,number=1)
-    print(t0)
+    # print("1 Thread Benchmark")
+    # t0 = timeit.timeit("standardRun()",setup=setup,number=1)
+    # print(t0)
 
-    print("16 Thread Benchmark")
-    t1 = timeit.timeit("asynchronousRun()",setup=setup,number=1)
-    print(t1)
+    # print("16 Thread Benchmark")
+    # t1 = timeit.timeit("asynchronousRun()",setup=setup,number=1)
+    # print(t1)
 
-    print("Speedup:",t0/t1)
+    # print("Speedup:",t0/t1)
+
+    standardRun()
+    asynchronousRun()

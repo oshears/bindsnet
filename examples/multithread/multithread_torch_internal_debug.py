@@ -5,14 +5,15 @@ from multiprocessing.managers import BaseManager
 
 import time as timeModule
 
+
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
 
 class Network():
 
     def __init__(self,layers):
-        self.x = torch.rand(10000,100,100)
-        self.y = torch.rand(10000,100,100)
+        self.x = torch.rand(1,1000,1000)
+        self.y = torch.rand(1,1000,1000)
         self.count = torch.zeros(1)
         self.layers = layers
 
@@ -40,6 +41,15 @@ class AsyncNetwork(Network):
         self.n_workers = n_workers
 
         #self.pool = mp.Pool(processes=n_workers)
+
+    def __getstate__(self):
+        return (self.x,self.y,self.count,self.n_workers)
+
+    def __setstate__(self, state):
+        AsyncNetwork.__init__(self,state[3],state[3])
+        self.x = state[0]
+        self.y = state[1]
+        self.count = state[2]
 
     def run(self,time,overheadTimes):
         self.count[0] = 0
@@ -119,8 +129,8 @@ if __name__ == "__main__":
 
     
 
-    x = torch.rand(10000,100,100)
-    y = torch.rand(10000,100,100)
+    x = torch.rand(1,1000,1000)
+    y = torch.rand(1,1000,1000)
 
     
 
@@ -169,7 +179,7 @@ if __name__ == "__main__":
         print("Time:\t",time,"\tSpeedup(2):\t",t0/t2)
         print("Time:\t",time,"\tSpeedup(3):\t",t0/t3)
         print("Time:\t",time,"\tSpeedup(4):\t",t0/t4)
-        print("\n")
+        print("-"*100)
 
 
         # Better Performance When:
