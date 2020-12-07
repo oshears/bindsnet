@@ -33,9 +33,6 @@ def constructNetwork(network:Network,layers:int,nodes:int,recurrent:bool,time:in
                     source="Y"+str(l-1),
                     target="Y"+str(l))
 
-        if l == layers - 1:
-            network.add_monitor(Monitor(network.layers["Y"+str(l-1)], ["v","s"], time=time),name="Y"+str(l))
-
     if recurrent:
         for l0 in network.layers:
             for l1 in network.layers:
