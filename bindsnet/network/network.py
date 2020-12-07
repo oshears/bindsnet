@@ -431,53 +431,13 @@ class Network(torch.nn.Module):
         self.learning = mode
         return super().train(mode)
 
+    def wait_for_next_thread(self,threads,n_threads):
+        while len(threads) > n_threads:
+            threads[0].join()
+            del threads[0]
 
-class AsynchronousNetwork(Network):
-
-    def __init__(
-        self,
-        dt: float = 1.0,
-        batch_size: int = 1,
-        learning: bool = True,
-        reward_fn: Optional[Type[AbstractReward]] = None,
-        n_threads = -1,
-    ) -> None:
-        # language=rst
-        """
-        Initializes network object.
-
-        :param dt: Simulation timestep.
-        :param batch_size: Mini-batch size.
-        :param learning: Whether to allow connection updates. True by default.
-        :param reward_fn: Optional class allowing for modification of reward in case of
-            reward-modulated learning.
-        """
-        super().__init__(dt,batch_size,learning,reward_fn)
-
-        if n_threads == -1:
-            self.n_threads = os.cpu_count()
-        else:
-            self.n_threads = n_threads
-
-        # Set environment variables
-        os.environ['OMP_NUM_THREADS'] = '1'
-        os.environ['MKL_NUM_THREADS'] = '1'
-        torch.set_num_threads(self.n_threads+1)
-
-        self.share_memory()
-
-
-    def set_n_threads(self,n_threads):
-        self.n_threads = n_threads
-        torch.set_num_threads(n_threads+1)
-
-    def wait_for_next_thread(self,processes):
-        while len(processes) > self.n_threads:
-            processes[0].join()
-            del processes[0]
-
-    def run(
-        self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
+    def asyncRun(
+        self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, n_threads=1, **kwargs
     ) -> None:
         # language=rst
         """
@@ -587,8 +547,19 @@ class AsynchronousNetwork(Network):
             # run node layer updates
             threads = []
             for l in self.layers:
-                self.wait_for_next_thread(threads)
-                t = threading.Thread(target=self._layer_evaluation,args=(l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps,))
+                if l in inputs:
+                    if l in current_inputs:
+                        current_inputs[l] += inputs[l][t]
+                    else:
+                        current_inputs[l] = inputs[l][t]
+
+                if one_step:
+                    # Get input to this layer (one-step mode).
+                    current_inputs.update(self._get_inputs(layers=[l]))
+
+                layer_inputs = current_inputs[l] if (l in current_inputs) else torch.zeros(self.layers[l].s.shape)
+                self.wait_for_next_thread(threads,n_threads)
+                t = threading.Thread(target=self._layer_evaluation,args=(l,self.layers[l],layer_inputs,t,injects_v,clamps,unclamps,))
                 t.start()
                 threads.append(t)
             
@@ -598,8 +569,8 @@ class AsynchronousNetwork(Network):
             # Run synapse updates.
             threads = []
             for c in self.connections:
-                self.wait_for_next_thread(threads)
-                t = threading.Thread(target=self._connection_update,args=(c,masks,kwargs,)) 
+                self.wait_for_next_thread(threads,n_threads)
+                t = threading.Thread(target=self._connection_update,args=(self.connections[c],masks,kwargs,)) 
                 t.start()
                 threads.append(t)
             
@@ -613,8 +584,8 @@ class AsynchronousNetwork(Network):
             # Record state variables of interest.
             threads = []
             for m in self.monitors:
-                self.wait_for_next_thread(threads)
-                t = threading.Thread(target=self._monitor_record,args=(m,)) 
+                self.wait_for_next_thread(threads,n_threads)
+                t = threading.Thread(target=self._monitor_record,args=(self.monitors[m],)) 
                 t.start()
                 threads.append(t)
             
@@ -624,8 +595,8 @@ class AsynchronousNetwork(Network):
         # Re-normalize connections.
         threads = []
         for c in self.connections:
-            self.wait_for_next_thread(threads)
-            t = threading.Thread(target=self._connection_normalize,args=(c,))
+            self.wait_for_next_thread(threads,n_threads)
+            t = threading.Thread(target=self._connection_normalize,args=(self.connections[c],))
             t.start()
             threads.append(t)
         
@@ -634,53 +605,40 @@ class AsynchronousNetwork(Network):
             
 
     def _connection_update(self,c,masks,kwargs):
-        self.connections[c].update(
+        c.update(
             mask=masks.get(c, None), learning=self.learning, **kwargs
         )
 
     def _monitor_record(self,m):
-        self.monitors[m].record()
+        m.record()
 
     def _connection_normalize(self,c):
-        self.connections[c].normalize()
+        c.normalize()
 
-    def _layer_evaluation(self,l,inputs,current_inputs,t,one_step,injects_v,clamps,unclamps):
+    def _layer_evaluation(self,l,layer,inputs,t,injects_v,clamps,unclamps):
         # Update each layer of nodes.
-        if l in inputs:
-            if l in current_inputs:
-                current_inputs[l] += inputs[l][t]
-            else:
-                current_inputs[l] = inputs[l][t]
-
-        if one_step:
-            # Get input to this layer (one-step mode).
-            current_inputs.update(self._get_inputs(layers=[l]))
-
-        if l in current_inputs:
-            self.layers[l].forward(x=current_inputs[l])
-        else:
-            self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
+        layer.forward(x=inputs)
 
         # Clamp neurons to spike.
         clamp = clamps.get(l, None)
         if clamp is not None:
             if clamp.ndimension() == 1:
-                self.layers[l].s[:, clamp] = 1
+                layer.s[:, clamp] = 1
             else:
-                self.layers[l].s[:, clamp[t]] = 1
+                layer.s[:, clamp[t]] = 1
 
         # Clamp neurons not to spike.
         unclamp = unclamps.get(l, None)
         if unclamp is not None:
             if unclamp.ndimension() == 1:
-                self.layers[l].s[:, unclamp] = 0
+                layer.s[:, unclamp] = 0
             else:
-                self.layers[l].s[:, unclamp[t]] = 0
+                layer.s[:, unclamp[t]] = 0
 
         # Inject voltage to neurons.
         inject_v = injects_v.get(l, None)
         if inject_v is not None:
             if inject_v.ndimension() == 1:
-                self.layers[l].v += inject_v
+                layer.v += inject_v
             else:
-                self.layers[l].v += inject_v[t]
+                layer.v += inject_v[t]

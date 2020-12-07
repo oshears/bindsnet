@@ -1,2 +1,2 @@
-from .network import Network, AsynchronousNetwork, load
+from .network import Network, load
 from . import nodes, topology, monitors
