@@ -1,6 +1,5 @@
 from bindsnet.network.nodes import Input, IFNodes
 from bindsnet.network.network import Network
-from bindsnet.network.monitors import Monitor
 from bindsnet.network.topology import Connection
 from bindsnet.learning.learning import PostPre
 
@@ -10,7 +9,9 @@ import timeit
 
 import argparse
 
-def constructNetwork(network:Network,layers:int,nodes:int,recurrent:bool,time:int):
+def constructNetwork(layers:int,nodes:int,recurrent:bool,time:int):
+    network = Network()
+
     network.add_layer(Input(n=nodes,traces=True), name="X")
 
     for l in range(layers):
@@ -52,7 +53,7 @@ def main(device,n_threads,n_layers,n_neurons_per,recurrent):
     # SNN timesteps
     time = 1000
 
-    network = Network()
+    network = constructNetwork(n_layers,n_neurons_per,recurrent,time)
 
     torchDevice = device
 
@@ -60,8 +61,6 @@ def main(device,n_threads,n_layers,n_neurons_per,recurrent):
         network.to("cuda")
         torchDevice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    constructNetwork(network,n_layers,n_neurons_per,recurrent,time)
-
     if n_threads > 0:
         torch.set_num_threads(n_threads)
         network.asyncRun(inputs={"X":torch.rand((time,n_neurons_per),device=torchDevice)},n_threads=n_threads,time=time)
