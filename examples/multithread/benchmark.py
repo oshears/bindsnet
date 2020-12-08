@@ -45,7 +45,8 @@ def constructNetwork(layers:int,nodes:int,recurrent:bool,time:int):
                                 update_rule=PostPre),
                     source=l0,
                     target=l1)
-                
+    
+    return network
 
 
 def main(device,n_threads,n_layers,n_neurons_per,recurrent):
