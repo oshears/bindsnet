@@ -61,7 +61,7 @@ def main(device,n_threads,batch_size,encoding):
     # create a dataloader to iterate over and batch the training data
     train_dataloader = DataLoader( dataset, batch_size=batch_size, shuffle=True, num_workers=16, pin_memory=True, )
 
-    start = timeModule.time_ns()
+    start = timeModule.time()
 
     for step, batch in enumerate(train_dataloader):
 
@@ -80,9 +80,9 @@ def main(device,n_threads,batch_size,encoding):
 
         if step % 10 == 0:
             print("Progress:",step,"/",60000)
-            print("Rate:",step / round(((timeModule.time_ns() - start) * 1e-9),3))
+            print("Rate:",step / round(((timeModule.time() - start) * 1e-9),3))
 
-    return timeModule.time_ns() - start
+    return timeModule.time() - start
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
