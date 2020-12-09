@@ -48,7 +48,6 @@ def constructNetwork(layers:int,nodes:int,recurrent:bool,time:int):
     
     return network
 
-
 def main(device,n_threads,n_layers,n_neurons_per,recurrent):
 
     # SNN timesteps
