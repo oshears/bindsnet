@@ -36,12 +36,36 @@ def constructNetwork(batch_size):
 
     return network
 
+def constructSimpleNetwork(batch_size):
+    network = Network(batch_size=batch_size)
+
+    input_layer = Input(n=784,shape=(1, 28, 28),traces=True)
+
+    lif0_layer = LIFNodes(n=32,traces=True)
+    lif1_layer = LIFNodes(n=5,traces=True)
+    lif2_layer = LIFNodes(n=10,traces=True)
+
+    network.add_layer(input_layer, name="X")
+    network.add_layer(lif0_layer, name="L0")
+    network.add_layer(lif1_layer, name="L1")
+    network.add_layer(lif2_layer, name="L2")
+
+    connect_input_0 = Connection(source=input_layer,target=lif0_layer,update_rule=PostPre)
+    connect_0_1 = Connection(source=lif0_layer,target=lif1_layer,update_rule=PostPre)
+    connect_1_2 = Connection(source=lif1_layer,target=lif2_layer,update_rule=PostPre)
+
+    network.add_connection(connect_input_0,source="X",target="L0")
+    network.add_connection(connect_0_1,source="L0",target="L1")
+    network.add_connection(connect_1_2,source="L1",target="L2")
+
+    return network
+
 def main(device,n_threads,batch_size,encoding):
 
     # SNN timesteps
-    time = 1000
+    time = 100
 
-    network = constructNetwork(batch_size)
+    network = constructSimpleNetwork(batch_size)
 
     torchDevice = device
 
@@ -78,9 +102,9 @@ def main(device,n_threads,batch_size,encoding):
         # reset the network before running it again
         network.reset_state_variables()  
 
-        if step % 10 == 0:
-            print("Progress:",step,"/",60000)
-            print("Rate:",step / round(((timeModule.perf_counter() - start)),3))
+        if step % 10 == 0 and step != 0:
+            print("Progress:",(step+1),"/",60000)
+            print("Rate:",(step+1) / round(((timeModule.perf_counter() - start)),3))
 
     return timeModule.perf_counter() - start
 
@@ -104,6 +128,8 @@ if __name__ == '__main__':
     # setup += "n_threads = "     + str(n_threads)+"\n"
     # setup += "batch_size = "    + str(batch_size)+"\n"
     # setup += "encoding = '"      + str(encoding) +"'\n"
+
+    print("Device:",device,"  Threads:",n_threads,"  Batch Size:",batch_size,"  Encoding:",encoding)
 
     if(n_threads > 0):
         torch.set_num_threads(n_threads)
