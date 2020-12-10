@@ -65,7 +65,8 @@ def main(device,n_threads,batch_size,encoding):
     # SNN timesteps
     time = 100
 
-    network = constructSimpleNetwork(batch_size)
+    network = constructNetwork(batch_size)
+    # network = constructSimpleNetwork(batch_size)
 
     torchDevice = device
 
@@ -87,15 +88,20 @@ def main(device,n_threads,batch_size,encoding):
 
     start = timeModule.perf_counter()
 
+    if n_threads > 0:
+        network.startThreads(n_threads)
+
     for step, batch in enumerate(train_dataloader):
 
         # get next input sample and send to the GPU if using CUDA
         inputs = {"X": batch["encoded_image"]}
         if device == "gpu":
-            inputs = inputs["X"].cuda()
+            inputs = {k: v.cuda() for k, v in inputs.items()}
 
         if n_threads > 0:
-            network.asyncRun(inputs=inputs,n_threads=n_threads,time=time,input_time_dim=1)
+            # network.asyncRun(inputs=inputs,n_threads=n_threads,time=time,input_time_dim=1)
+            network.asyncRun2(inputs=inputs,n_threads=n_threads,time=time,input_time_dim=1)
+            
         else:
             network.run(inputs=inputs,time=time,input_time_dim=1)
 
@@ -103,8 +109,11 @@ def main(device,n_threads,batch_size,encoding):
         network.reset_state_variables()  
 
         if step % 10 == 0 and step != 0:
-            print("Progress:",(step+1),"/",60000)
-            print("Rate:",(step+1) / round(((timeModule.perf_counter() - start)),3))
+            print("Progress:",batch_size*(step+1),"/",60000)
+            print("Rate:",batch_size*(step+1) / round(((timeModule.perf_counter() - start)),3))
+    
+    #if n_threads > 0:
+    #    network.stopThreads()
 
     return timeModule.perf_counter() - start
 

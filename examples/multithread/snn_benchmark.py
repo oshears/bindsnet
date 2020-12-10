@@ -1,6 +1,6 @@
 from bindsnet.network.nodes import Input, IFNodes
 from bindsnet.network.network import Network
-from bindsnet.network.topology import Connection
+from bindsnet.network.topology import Connection, ThreadedConnection
 from bindsnet.learning.learning import PostPre
 
 import torch
@@ -9,7 +9,7 @@ import timeit
 
 import argparse
 
-def constructNetwork(layers:int,nodes:int,recurrent:bool,time:int):
+def constructNetwork(layers:int,nodes:int,recurrent:bool,time:int,n_threads:int):
     network = Network()
 
     network.add_layer(Input(n=nodes,traces=True), name="X")
@@ -19,41 +19,76 @@ def constructNetwork(layers:int,nodes:int,recurrent:bool,time:int):
 
         if not recurrent:
             if l == 0:
-                network.add_connection(
-                    Connection( source=network.layers["X"],
-                                target=network.layers["Y"+str(l)],
-                                update_rule=PostPre
-                                ),
-                    source="X",
-                    target="Y"+str(l))
+                if n_threads > 0:
+                    connect = ThreadedConnection( source=network.layers["X"],
+                                    target=network.layers["Y"+str(l)],
+                                    update_rule=PostPre,
+                                    n_threads=n_threads
+                                    )
+                    connect.startThreads(n_threads)
+                    network.add_connection(
+                        connect,
+                        source="X",
+                        target="Y"+str(l))
+                else:
+                    network.add_connection(
+                        Connection( source=network.layers["X"],
+                                    target=network.layers["Y"+str(l)],
+                                    update_rule=PostPre
+                                    ),
+                        source="X",
+                        target="Y"+str(l))
             else:
-                network.add_connection(
-                    Connection( source=network.layers["Y"+str(l-1)],
-                                target=network.layers["Y"+str(l)],
-                                update_rule=PostPre),
-                    source="Y"+str(l-1),
-                    target="Y"+str(l))
+                if n_threads > 0:
+                    connect = ThreadedConnection( source=network.layers["Y"+str(l-1)],
+                                    target=network.layers["Y"+str(l)],
+                                    update_rule=PostPre,
+                                    n_threads=n_threads
+                                    )
+                    connect.startThreads(n_threads)
+                    network.add_connection(
+                        connect,
+                        source="Y"+str(l-1),
+                        target="Y"+str(l))
+                else:
+                    network.add_connection(
+                        Connection( source=network.layers["Y"+str(l-1)],
+                                    target=network.layers["Y"+str(l)],
+                                    update_rule=PostPre),
+                        source="Y"+str(l-1),
+                        target="Y"+str(l))
 
     if recurrent:
         for l0 in network.layers:
             for l1 in network.layers:
                 if l1 == "X":
                     pass
-                network.add_connection(
-                    Connection( source=network.layers[l0],
-                                target=network.layers[l1],
-                                update_rule=PostPre),
-                    source=l0,
-                    target=l1)
+                if n_threads > 0:
+                    connect = ThreadedConnection( source=network.layers[l0],
+                                    target=network.layers[l1],
+                                    update_rule=PostPre,
+                                    n_threads=n_threads)
+                    connect.startThreads(n_threads)
+                    network.add_connection(
+                        connect,
+                        source=l0,
+                        target=l1)
+                else:
+                    network.add_connection(
+                        Connection( source=network.layers[l0],
+                                    target=network.layers[l1],
+                                    update_rule=PostPre),
+                        source=l0,
+                        target=l1)
     
     return network
 
 def main(device,n_threads,n_layers,n_neurons_per,recurrent):
 
     # SNN timesteps
-    time = 1000
+    time = 10000
 
-    network = constructNetwork(n_layers,n_neurons_per,recurrent,time)
+    network = constructNetwork(n_layers,n_neurons_per,recurrent,time,n_threads)
 
     torchDevice = device
 
@@ -61,11 +96,17 @@ def main(device,n_threads,n_layers,n_neurons_per,recurrent):
         network.to("cuda")
         torchDevice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    if n_threads > 0:
-        torch.set_num_threads(n_threads)
-        network.asyncRun(inputs={"X":torch.rand((time,n_neurons_per),device=torchDevice)},n_threads=n_threads,time=time)
-    else:
-        network.run(inputs={"X":torch.rand((time,n_neurons_per),device=torchDevice)},time=time)
+    # if n_threads > 0:
+    #     network.startThreads(n_threads)
+
+    # if n_threads > 0:
+    #     torch.set_num_threads(n_threads)
+    #     network.asyncRun2(inputs={"X":torch.rand((time,n_neurons_per),device=torchDevice)},time=time)
+    # else:
+    network.run(inputs={"X":torch.rand((time,n_neurons_per),device=torchDevice)},time=time)
+
+    #if n_threads > 0:
+    #    network.stopThreads()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -91,6 +132,8 @@ if __name__ == '__main__':
     setup += "n_layers = "      + str(n_layers)+"\n"
 
     task = "main(device,n_threads,recurrent,n_neurons_per,n_layers)"
-
+    
     t = timeit.timeit(task,setup=setup,number=1)
     print("Device:",device,"  Threads:",n_threads,"  Neurons:",n_neurons_per,"  Layers:",n_layers,"  Recurrent:",recurrent,"  Execution Time:",t)
+
+    # main(device,n_threads,recurrent,n_neurons_per,n_layers)
