@@ -92,6 +92,7 @@ class Network(torch.nn.Module):
         batch_size: int = 1,
         learning: bool = True,
         reward_fn: Optional[Type[AbstractReward]] = None,
+        n_threads = 0
     ) -> None:
         # language=rst
         """
@@ -119,9 +120,11 @@ class Network(torch.nn.Module):
         else:
             self.reward_fn = None
 
-        self.threads = []
-        self.job_queue = queue.Queue()
-        self.response_queue = queue.Queue()
+        if n_threads > 0:
+            self.threads = []
+            self.job_queue = queue.Queue()
+            self.response_queue = queue.Queue()
+            self.threadManager = ThreadManager(os.cpu_count())
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
@@ -761,7 +764,9 @@ class Network(torch.nn.Module):
             # Get input to all layers (synchronous mode).
             current_inputs = {}
             if not one_step:
-                current_inputs.update(self._get_inputs_threaded())
+                current_inputs.update(self._get_inputs())
+                # current_inputs.update(self._get_inputs_threaded())
+                # current_inputs.update(self._get_inputs_threaded2())
             
             for l in self.layers:
                 # Update each layer of nodes.
@@ -776,9 +781,14 @@ class Network(torch.nn.Module):
                     current_inputs.update(self._get_inputs(layers=[l]))
 
                 if l in current_inputs:
-                    self.layers[l].forward(x=current_inputs[l])
+                    # self.layers[l].forward(x=current_inputs[l])
+                    self.threadManager.q0.put({"type":"forward","items":(self.layers[l],current_inputs[l])})
+                    # self.layers[l].forward(x=current_inputs[l])
                 else:
-                    self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
+                    self.threadManager.q0.put({"type":"forward","items":(self.layers[l],torch.zeros(self.layers[l].s.shape))})
+                    #self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
+
+                self.threadManager.q0.join()
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -806,9 +816,12 @@ class Network(torch.nn.Module):
 
             # Run synapse updates.
             for c in self.connections:
-                self.connections[c].update(
-                    mask=masks.get(c, None), learning=self.learning, **kwargs
-                )
+                self.threadManager.q0.put({"type":"connectionUpdate","items":(self.connections[c],masks.get(c, None),self.learning)})
+                # self.connections[c].update(
+                #     mask=masks.get(c, None), learning=self.learning, **kwargs
+                # )
+            
+            self.threadManager.q0.join()
 
             # Get input to all layers.
             # OYS 11/28/20 is this necessary? Seems like it gets negated upon the next loop
@@ -865,6 +878,37 @@ class Network(torch.nn.Module):
 
         return inputs
 
+    def _get_inputs_threaded2(self, layers: Iterable = None) -> Dict[str, torch.Tensor]:
+        # language=rst
+        """
+        Fetches outputs from network layers to use as input to downstream layers.
+
+        :param layers: Layers to update inputs for. Defaults to all network layers.
+        :return: Inputs to all layers for the current iteration.
+        """
+        inputs = {}
+
+        if layers is None:
+            layers = self.layers
+
+        # Loop over network connections.
+        for c in self.connections:
+            if c[1] in layers:
+                # Fetch source and target populations.
+                source = self.connections[c].source
+                target = self.connections[c].target
+
+                if not c[1] in inputs:
+                    inputs[c[1]] = torch.zeros(
+                        self.batch_size, *target.shape, device=target.s.device
+                    )
+
+
+                # Add to input: source's spikes multiplied by connection weights.
+                inputs[c[1]] += self.connections[c].compute(source.s,self.threadManager)
+
+        return inputs
+
 
     def _threadTask(self,i,job_queue):
         while True:
@@ -902,3 +946,48 @@ class Network(torch.nn.Module):
                 c = item["c"]
                 self._connection_normalize(c)
                 job_queue.task_done()
+
+class ThreadManager:
+    def __init__(self,n_threads):
+        self.n_threads = n_threads
+
+        self.q0 = queue.Queue()
+        self.q1 = queue.Queue()
+
+        self.threads = []
+        for i in range(n_threads):
+            t = threading.Thread(target=self._threadCompute,args=(i,),daemon=True)
+            t.start()
+            self.threads.append(t)
+
+    def _threadCompute(self,i):
+        while True:
+            task = self.q0.get()
+            taskType = task["type"]
+            items = task["items"]
+            if taskType == "computeInputs":
+                start_idx = items[0][0]
+                end_idx = items[0][1]
+                s = items[1]
+                w = items[2]
+                b = items[3]
+                cols_per_thread = items[4]
+                t_spikes  = s
+                t_weights = w[:,start_idx:end_idx]
+                result = t_spikes @ t_weights + b[start_idx:end_idx]
+                returnVal = ((start_idx,end_idx),result)
+                self.q1.put(returnVal)
+                self.q0.task_done()
+            elif taskType == "forward":
+                layer = items[0]
+                inputs = items[1]
+                layer.forward(inputs)
+                self.q0.task_done()
+            elif taskType == "connectionUpdate":
+                c = items[0]
+                mask = items[1]
+                learning = items[2]
+                # kwargs = items[2]
+                layer.forward(inputs)
+                c.update( mask=mask, learning=learning)
+                self.q0.task_done()

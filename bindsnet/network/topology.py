@@ -278,7 +278,7 @@ class ThreadedConnection(Connection):
             t.start()
             self.threads.append(t)
 
-    def compute(self, s: torch.Tensor) -> torch.Tensor:
+    def compute(self, s: torch.Tensor,threadManager=None) -> torch.Tensor:
         # language=rst
         """
         Compute pre-activations given spikes using connection weights.
@@ -291,59 +291,49 @@ class ThreadedConnection(Connection):
         #post = s.float().view(s.size(0), -1) @ self.w + self.b
 
         # start = time.perf_counter()
+        if(threadManager is None):
+            return super().compute(s)
 
         #number of threads to kick off
-        cols_per_thread = int(s.shape[1] / self.n_threads)
+        n_neurons = self.w.shape[1]
+        cols_per_thread = int(n_neurons / threadManager.n_threads)
 
         #spikes
         spikes = s.float().view(s.size(0), -1)
 
-        post = torch.zeros((1,s.shape[1]))
+        post = torch.zeros((1,self.w.shape[1]))
 
-        # threads = []
-        for i in range(self.n_threads):
-            items = (i,spikes,cols_per_thread)
-            self.q0.put(items)
-            # t = threading.Thread(target=self._threadCompute,args=(q0,q1))
-            # t.start()
-            # threads.append(t)
+        taskType = "computeInputs"
 
-        # self.q0.join()
+        for i in range(threadManager.n_threads):
+            start_idx = i*cols_per_thread
+            end_idx = (i+1)*cols_per_thread if i != threadManager.n_threads - 1 else n_neurons
+            items = ((start_idx,end_idx),spikes,self.w,self.b,cols_per_thread)
+            threadManager.q0.put({"type":taskType,"items":items})
 
-        for i in range(self.n_threads):
-            items = self.q1.get()
-            i = items[0]
+        for i in range(threadManager.n_threads):
+            items = threadManager.q1.get()
+            start_idx = items[0][0]
+            end_idx = items[0][1]
             result = items[1]
-            post[i*cols_per_thread : (i+1)*cols_per_thread,:] = result
-            self.q1.task_done()
+            post[:,start_idx:end_idx] = result
+            threadManager.q1.task_done()
 
-        # print("Post:",post.shape)
 
-        # done = time.perf_counter() - start
-        # print("done in: ",done)
         return post
 
     def _threadCompute(self,t):
         while True:
             items = self.q0.get()
-            # start = time.perf_counter()
             i = items[0]
             s = items[1]
             cols_per_thread = items[2]
             t_spikes  = s[:,i*cols_per_thread:(i+1)*cols_per_thread]
             t_weights = self.w[i*cols_per_thread:(i+1)*cols_per_thread, : ]
-            # bias = self.b[i*cols_per_thread:(i+1)*cols_per_thread]
-            # print(i,"spikes:",t_spikes.shape)
-            # print(i,"weights:",t_weights.shape)
-            # result = t_spikes @ t_weights
-            # print("result:",result.shape)
-            # print("bias:",bias.shape)
             result = t_spikes @ t_weights + self.b
             returnVal = (i,result)
             self.q1.put(returnVal)
             self.q0.task_done()
-            # done = time.perf_counter() - start
-            # print("done in: ",done)
 
 
 class Conv2dConnection(AbstractConnection):
