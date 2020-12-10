@@ -86,11 +86,12 @@ def main(device,n_threads,batch_size,encoding):
     # create a dataloader to iterate over and batch the training data
     train_dataloader = DataLoader( dataset, batch_size=batch_size, shuffle=True, num_workers=16, pin_memory=True, )
 
-    start = timeModule.perf_counter()
+    
 
     if n_threads > 0:
         network.startThreads(n_threads)
 
+    start = timeModule.perf_counter()
     for step, batch in enumerate(train_dataloader):
 
         # get next input sample and send to the GPU if using CUDA
@@ -106,8 +107,8 @@ def main(device,n_threads,batch_size,encoding):
         if step % 10 == 0 and step != 0:
             print("Progress:",batch_size*(step+1),"/",60000)
             print("Rate:",batch_size*(step+1) / round(((timeModule.perf_counter() - start)),3))
-    
-    return timeModule.perf_counter() - start
+    duration = timeModule.perf_counter() - start
+    return duration
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
