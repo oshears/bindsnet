@@ -195,7 +195,7 @@ class Connection(AbstractConnection):
             #spikes
             spikes = s.float().view(s.size(0), -1)
 
-            post = torch.zeros((s.shape[0],self.w.shape[1]))
+            post = torch.zeros((s.shape[0],self.w.shape[1]),device=spikes.get_device())
 
             for i in range(threadManager.n_threads):
                 start_idx = i*cols_per_thread
