@@ -23,9 +23,9 @@ if __name__ == '__main__':
     # max_size = n_threads * 10000
     # min_size = n_threads * 100
     # step_size = n_threads * 1000
-    max_size = n_threads * 10000
-    min_size = n_threads * 1
-    step_size = n_threads * 1000
+    max_size = n_threads * 4000
+    min_size = n_threads * 500
+    step_size = n_threads * 500
 
     iterations = 10
 
