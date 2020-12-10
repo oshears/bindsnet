@@ -12,8 +12,8 @@ from torchvision import transforms
 import os
 
 
-def constructNetwork(batch_size):
-    network = Network(batch_size=batch_size)
+def constructNetwork(batch_size,n_threads):
+    network = Network(batch_size=batch_size,n_threads=n_threads)
 
     input_layer = Input(n=784,shape=(1, 28, 28),traces=True)
 
@@ -65,7 +65,7 @@ def main(device,n_threads,batch_size,encoding):
     # SNN timesteps
     time = 100
 
-    network = constructNetwork(batch_size)
+    network = constructNetwork(batch_size,n_threads)
     # network = constructSimpleNetwork(batch_size)
 
     torchDevice = device
@@ -98,12 +98,7 @@ def main(device,n_threads,batch_size,encoding):
         if device == "gpu":
             inputs = {k: v.cuda() for k, v in inputs.items()}
 
-        if n_threads > 0:
-            # network.asyncRun(inputs=inputs,n_threads=n_threads,time=time,input_time_dim=1)
-            network.asyncRun2(inputs=inputs,n_threads=n_threads,time=time,input_time_dim=1)
-            
-        else:
-            network.run(inputs=inputs,time=time,input_time_dim=1)
+        network.run(inputs=inputs,time=time,input_time_dim=1)
 
         # reset the network before running it again
         network.reset_state_variables()  
@@ -112,9 +107,6 @@ def main(device,n_threads,batch_size,encoding):
             print("Progress:",batch_size*(step+1),"/",60000)
             print("Rate:",batch_size*(step+1) / round(((timeModule.perf_counter() - start)),3))
     
-    #if n_threads > 0:
-    #    network.stopThreads()
-
     return timeModule.perf_counter() - start
 
 if __name__ == '__main__':

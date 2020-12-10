@@ -121,6 +121,7 @@ class Network(torch.nn.Module):
             self.reward_fn = None
 
         if n_threads > 0:
+            self.n_threads = n_threads
             self.threads = []
             self.job_queue = queue.Queue()
             self.response_queue = queue.Queue()
@@ -352,7 +353,10 @@ class Network(torch.nn.Module):
             # Get input to all layers (synchronous mode).
             current_inputs = {}
             if not one_step:
-                current_inputs.update(self._get_inputs())
+                if self.n_threads == 0:
+                    current_inputs.update(self._get_inputs())
+                else:
+                    current_inputs.update(self._get_inputs_threaded2())
             
             for l in self.layers:
                 # Update each layer of nodes.
@@ -367,9 +371,18 @@ class Network(torch.nn.Module):
                     current_inputs.update(self._get_inputs(layers=[l]))
 
                 if l in current_inputs:
-                    self.layers[l].forward(x=current_inputs[l])
+                    if self.n_threads == 0:
+                        self.layers[l].forward(x=current_inputs[l])
+                    else:
+                        self.threadManager.q0.put({"type":"forward","items":(self.layers[l],current_inputs[l])})
                 else:
-                    self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
+                    if self.n_threads == 0:
+                        self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
+                    else:
+                        self.threadManager.q0.put({"type":"forward","items":(self.layers[l],torch.zeros(self.layers[l].s.shape))})
+
+                if self.n_threads != 0:
+                    self.threadManager.q0.join()
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -397,9 +410,15 @@ class Network(torch.nn.Module):
 
             # Run synapse updates.
             for c in self.connections:
-                self.connections[c].update(
-                    mask=masks.get(c, None), learning=self.learning, **kwargs
-                )
+                if self.n_threads == 0:
+                    self.connections[c].update(
+                        mask=masks.get(c, None), learning=self.learning, **kwargs
+                    )
+                else:
+                    self.threadManager.q0.put({"type":"connectionUpdate","items":(self.connections[c],masks.get(c, None),self.learning)})
+
+            if self.n_threads != 0:
+                self.threadManager.q0.join()
 
             # Get input to all layers.
             # OYS 11/28/20 is this necessary? Seems like it gets negated upon the next loop
@@ -764,9 +783,9 @@ class Network(torch.nn.Module):
             # Get input to all layers (synchronous mode).
             current_inputs = {}
             if not one_step:
-                current_inputs.update(self._get_inputs())
+                # current_inputs.update(self._get_inputs())
                 # current_inputs.update(self._get_inputs_threaded())
-                # current_inputs.update(self._get_inputs_threaded2())
+                current_inputs.update(self._get_inputs_threaded2())
             
             for l in self.layers:
                 # Update each layer of nodes.
@@ -988,6 +1007,5 @@ class ThreadManager:
                 mask = items[1]
                 learning = items[2]
                 # kwargs = items[2]
-                layer.forward(inputs)
                 c.update( mask=mask, learning=learning)
                 self.q0.task_done()

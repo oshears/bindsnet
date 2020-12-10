@@ -1,6 +1,6 @@
 from bindsnet.network.nodes import Input, IFNodes
 from bindsnet.network.network import Network
-from bindsnet.network.topology import Connection, ThreadedConnection
+from bindsnet.network.topology import Connection
 from bindsnet.learning.learning import PostPre
 from bindsnet.encoding import PoissonEncoder, RankOrderEncoder
 from bindsnet.datasets import MNIST, DataLoader
@@ -27,73 +27,37 @@ def constructNetwork(layers:int,nodes:int,recurrent:bool,time:int,n_threads:int,
         
         if not recurrent:
             if l == 0:
-                if n_threads > 0:
-                    connect = ThreadedConnection( source=network.layers["X"],
-                                    target=network.layers["Y"+str(l)],
-                                    update_rule=PostPre,
-                                    n_threads=n_threads
-                                    )
-                    
-                    #connect.startThreads(n_threads)
-                    network.add_connection(
-                        connect,
-                        source="X",
-                        target="Y"+str(l))
-                else:
-                    network.add_connection(
-                        Connection( source=network.layers["X"],
-                                    target=network.layers["Y"+str(l)],
-                                    update_rule=PostPre
-                                    ),
-                        source="X",
-                        target="Y"+str(l))
+                network.add_connection(
+                    Connection( source=network.layers["X"],
+                                target=network.layers["Y"+str(l)],
+                                update_rule=PostPre
+                                ),
+                    source="X",
+                    target="Y"+str(l))
             else:
-                if n_threads > 0:
-                    connect = ThreadedConnection( source=network.layers["Y"+str(l-1)],
-                                    target=network.layers["Y"+str(l)],
-                                    update_rule=PostPre,
-                                    n_threads=n_threads
-                                    )
-                    #connect.startThreads(n_threads)
-                    network.add_connection(
-                        connect,
-                        source="Y"+str(l-1),
-                        target="Y"+str(l))
-                else:
-                    network.add_connection(
-                        Connection( source=network.layers["Y"+str(l-1)],
-                                    target=network.layers["Y"+str(l)],
-                                    update_rule=PostPre),
-                        source="Y"+str(l-1),
-                        target="Y"+str(l))
+                network.add_connection(
+                    Connection( source=network.layers["Y"+str(l-1)],
+                                target=network.layers["Y"+str(l)],
+                                update_rule=PostPre),
+                    source="Y"+str(l-1),
+                    target="Y"+str(l))
 
     if recurrent:
         for l0 in set(network.layers) - {"X"}:
             for l1 in set(network.layers) - {"X"}:
-                if n_threads > 0:
-                    connect = ThreadedConnection( source=network.layers[l0],
-                                    target=network.layers[l1],
-                                    update_rule=PostPre,
-                                    n_threads=n_threads)
-                    #connect.startThreads(n_threads)
-                    network.add_connection(
-                        connect,
-                        source=l0,
-                        target=l1)
-                else:
-                    network.add_connection(
-                        Connection( source=network.layers[l0],
-                                    target=network.layers[l1],
-                                    update_rule=PostPre),
-                        source=l0,
-                        target=l1)
-    
+                network.add_connection(
+                    Connection( source=network.layers[l0],
+                                target=network.layers[l1],
+                                update_rule=PostPre),
+                    source=l0,
+                    target=l1)
+
     return network
 
 def main(device,n_threads,n_layers,n_neurons_per,recurrent,batch_size,encoding):
 
     # SNN timesteps
-    time = 100
+    time = 10
 
     network = constructNetwork(n_layers,n_neurons_per,recurrent,time,n_threads,batch_size)
     torchDevice = device
@@ -125,12 +89,7 @@ def main(device,n_threads,n_layers,n_neurons_per,recurrent,batch_size,encoding):
         if device == "gpu":
             inputs = {k: v.cuda() for k, v in inputs.items()}
 
-        if n_threads > 0:
-            # network.asyncRun(inputs=inputs,n_threads=n_threads,time=time,input_time_dim=1)
-            network.asyncRun2(inputs=inputs,n_threads=n_threads,time=time,input_time_dim=1)
-            
-        else:
-            network.run(inputs=inputs,time=time,input_time_dim=1)
+        network.run(inputs=inputs,time=time,input_time_dim=1)
 
         # reset the network before running it again
         network.reset_state_variables()  
@@ -165,10 +124,10 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     encoding = "rate" if (args.rate_coding or not args.temporal_coding) else "temporal"
 
-    n_threads = 4
+    n_threads = 8
     recurrent = False
-    n_neurons_per = 1000
-    n_layers = 100
+    n_neurons_per = 10
+    n_layers = 10
     batch_size = 1
 
     # setup = "from __main__ import main\n"
@@ -179,6 +138,9 @@ if __name__ == '__main__':
     # setup += "n_layers = "      + str(n_layers)+"\n"
 
     print("Device:",device,"  Threads:",n_threads,"  Batch Size:",batch_size,"  Encoding:",encoding)
+
+    if(n_threads > 0):
+        torch.set_num_threads(n_threads)
 
     # task = "main(device,n_threads,recurrent,n_neurons_per,n_layers)"
     
