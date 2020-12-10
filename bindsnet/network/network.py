@@ -985,8 +985,8 @@ class ThreadManager:
             taskType = task["type"]
             items = task["items"]
             if taskType == "computeInputs":
-                start_idx = items[0][0]
-                end_idx = items[0][1]
+                start_idx = int(items[0][0])
+                end_idx = int(items[0][1])
                 s = items[1]
                 w = items[2]
                 b = items[3]
