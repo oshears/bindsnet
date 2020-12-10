@@ -93,6 +93,8 @@ def main(device,n_threads,batch_size,encoding):
 
     start = timeModule.perf_counter()
     for step, batch in enumerate(train_dataloader):
+        if step == 10:
+            continue
 
         # get next input sample and send to the GPU if using CUDA
         inputs = {"X": batch["encoded_image"]}
