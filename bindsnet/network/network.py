@@ -983,7 +983,7 @@ class ThreadManager:
         while True:
             task = self.q0.get()
             taskType = task["type"]
-            items = task["items"]
+            items = list(task["items"])
             if taskType == "computeInputs":
                 start_idx = items[0][0]
                 end_idx = items[0][1]
