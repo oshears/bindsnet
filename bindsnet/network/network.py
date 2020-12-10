@@ -120,8 +120,8 @@ class Network(torch.nn.Module):
         else:
             self.reward_fn = None
 
+        self.n_threads = n_threads
         if n_threads > 0:
-            self.n_threads = n_threads
             self.threads = []
             self.job_queue = queue.Queue()
             self.response_queue = queue.Queue()
