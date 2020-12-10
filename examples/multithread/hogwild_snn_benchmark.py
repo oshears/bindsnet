@@ -63,7 +63,7 @@ def constructSimpleNetwork(batch_size):
 def main(device,n_threads,batch_size,encoding):
 
     # SNN timesteps
-    time = 100
+    time = 10
 
     network = constructNetwork(batch_size,n_threads)
     # network = constructSimpleNetwork(batch_size)
@@ -104,7 +104,7 @@ def main(device,n_threads,batch_size,encoding):
         # reset the network before running it again
         network.reset_state_variables()  
 
-        if step % 10 == 0 and step != 0:
+        if step % 1000 == 0 and step != 0:
             print("Progress:",batch_size*(step+1),"/",60000)
             print("Rate:",batch_size*(step+1) / round(((timeModule.perf_counter() - start)),3))
     duration = timeModule.perf_counter() - start
