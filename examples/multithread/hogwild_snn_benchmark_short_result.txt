@@ -1,0 +1,44 @@
+Device: cpu   Threads: 0   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 0   Batch Size: 128   Encoding: rate   Execution Time: 11.255786772817373
+Device: cpu   Threads: 4   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 4   Batch Size: 128   Encoding: rate   Execution Time: 137.85904185380787
+Device: cpu   Threads: 8   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 8   Batch Size: 128   Encoding: rate   Execution Time: 152.9228527341038
+Device: cpu   Threads: 12   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 12   Batch Size: 128   Encoding: rate   Execution Time: 145.03208664804697
+Device: cpu   Threads: 16   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 16   Batch Size: 128   Encoding: rate   Execution Time: 151.4693621462211
+Device: cpu   Threads: 20   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 20   Batch Size: 128   Encoding: rate   Execution Time: 132.39427947625518
+Device: cpu   Threads: 24   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 24   Batch Size: 128   Encoding: rate   Execution Time: 138.77605660445988
+Device: cpu   Threads: 28   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 28   Batch Size: 128   Encoding: rate   Execution Time: 146.02222700975835
+Device: cpu   Threads: 32   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 32   Batch Size: 128   Encoding: rate   Execution Time: 150.9390383977443
+Device: cpu   Threads: 36   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 36   Batch Size: 128   Encoding: rate   Execution Time: 166.13076971750706
+Device: cpu   Threads: 40   Batch Size: 128   Encoding: rate
+Device: cpu   Threads: 40   Batch Size: 128   Encoding: rate   Execution Time: 206.41669113654643
+Device: cpu   Threads: 0   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 0   Batch Size: 128   Encoding: temporal   Execution Time: 63.49230915680528
+Device: cpu   Threads: 4   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 4   Batch Size: 128   Encoding: temporal   Execution Time: 127.73332257475704
+Device: cpu   Threads: 8   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 8   Batch Size: 128   Encoding: temporal   Execution Time: 117.77642481122166
+Device: cpu   Threads: 12   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 12   Batch Size: 128   Encoding: temporal   Execution Time: 123.03363522328436
+Device: cpu   Threads: 16   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 16   Batch Size: 128   Encoding: temporal   Execution Time: 126.63926971517503
+Device: cpu   Threads: 20   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 20   Batch Size: 128   Encoding: temporal   Execution Time: 133.65744362026453
+Device: cpu   Threads: 24   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 24   Batch Size: 128   Encoding: temporal   Execution Time: 171.57084248494357
+Device: cpu   Threads: 28   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 28   Batch Size: 128   Encoding: temporal   Execution Time: 204.55273160338402
+Device: cpu   Threads: 32   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 32   Batch Size: 128   Encoding: temporal   Execution Time: 253.47198617085814
+Device: cpu   Threads: 36   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 36   Batch Size: 128   Encoding: temporal   Execution Time: 284.7699239673093
+Device: cpu   Threads: 40   Batch Size: 128   Encoding: temporal
+Device: cpu   Threads: 40   Batch Size: 128   Encoding: temporal   Execution Time: 336.49944492522627
