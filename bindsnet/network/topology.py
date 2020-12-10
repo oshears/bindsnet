@@ -9,6 +9,9 @@ from torch.nn.modules.utils import _pair
 
 from .nodes import Nodes
 
+import threading
+import queue
+import time
 
 class AbstractConnection(ABC, Module):
     # language=rst
@@ -175,7 +178,10 @@ class Connection(AbstractConnection):
                  decaying spike activation).
         """
         # Compute multiplication of spike activations by weights and add bias.
+        # start = time.perf_counter()
         post = s.float().view(s.size(0), -1) @ self.w + self.b
+        # done = time.perf_counter() - start
+        # print("done in: ",done)
         return post.view(s.size(0), *self.target.shape)
 
     def update(self, **kwargs) -> None:
@@ -202,6 +208,142 @@ class Connection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+
+class ThreadedConnection(Connection):
+    # language=rst
+    """
+    Specifies synapses between one or two populations of neurons.
+    """
+
+    def __init__(
+        self,
+        source: Nodes,
+        target: Nodes,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        n_threads: int = 1,
+        **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Instantiates a :code:`Connection` object.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+        :param reduction: Method for reducing parameter updates along the minibatch
+            dimension.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+
+        Keyword arguments:
+
+        :param LearningRule update_rule: Modifies connection parameters according to
+            some rule.
+        :param torch.Tensor w: Strengths of synapses.
+        :param torch.Tensor b: Target population bias.
+        :param float wmin: Minimum allowed value on the connection weights.
+        :param float wmax: Maximum allowed value on the connection weights.
+        :param float norm: Total weight per target neuron normalization constant.
+        """
+        super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
+
+        w = kwargs.get("w", None)
+        if w is None:
+            if self.wmin == -np.inf or self.wmax == np.inf:
+                w = torch.clamp(torch.rand(source.n, target.n), self.wmin, self.wmax)
+            else:
+                w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
+        else:
+            if self.wmin != -np.inf or self.wmax != np.inf:
+                w = torch.clamp(w, self.wmin, self.wmax)
+
+        self.w = Parameter(w, requires_grad=False)
+        self.b = Parameter(kwargs.get("b", torch.zeros(target.n)), requires_grad=False)
+
+        #self.threads = []
+        #self.jobQueue = queue.Queue()
+        self.n_threads = n_threads
+
+        #job queue
+        self.q0 = queue.Queue()
+        self.q1 = queue.Queue()
+
+
+    def startThreads(self,n_threads):
+        # start up threads
+        self.threads = []
+        for i in range(n_threads):
+            t = threading.Thread(target=self._threadCompute,args=(i,),daemon=True)
+            t.start()
+            self.threads.append(t)
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute pre-activations given spikes using connection weights.
+
+        :param s: Incoming spikes.
+        :return: Incoming spikes multiplied by synaptic weights (with or without
+                 decaying spike activation).
+        """
+        # Compute multiplication of spike activations by weights and add bias.
+        #post = s.float().view(s.size(0), -1) @ self.w + self.b
+
+        # start = time.perf_counter()
+
+        #number of threads to kick off
+        cols_per_thread = int(s.shape[1] / self.n_threads)
+
+        #spikes
+        spikes = s.float().view(s.size(0), -1)
+
+        post = torch.zeros((1,s.shape[1]))
+
+        # threads = []
+        for i in range(self.n_threads):
+            items = (i,spikes,cols_per_thread)
+            self.q0.put(items)
+            # t = threading.Thread(target=self._threadCompute,args=(q0,q1))
+            # t.start()
+            # threads.append(t)
+
+        # self.q0.join()
+
+        for i in range(self.n_threads):
+            items = self.q1.get()
+            i = items[0]
+            result = items[1]
+            post[i*cols_per_thread : (i+1)*cols_per_thread,:] = result
+            self.q1.task_done()
+
+        # print("Post:",post.shape)
+
+        # done = time.perf_counter() - start
+        # print("done in: ",done)
+        return post
+
+    def _threadCompute(self,t):
+        while True:
+            items = self.q0.get()
+            # start = time.perf_counter()
+            i = items[0]
+            s = items[1]
+            cols_per_thread = items[2]
+            t_spikes  = s[:,i*cols_per_thread:(i+1)*cols_per_thread]
+            t_weights = self.w[i*cols_per_thread:(i+1)*cols_per_thread, : ]
+            # bias = self.b[i*cols_per_thread:(i+1)*cols_per_thread]
+            # print(i,"spikes:",t_spikes.shape)
+            # print(i,"weights:",t_weights.shape)
+            # result = t_spikes @ t_weights
+            # print("result:",result.shape)
+            # print("bias:",bias.shape)
+            result = t_spikes @ t_weights + self.b
+            returnVal = (i,result)
+            self.q1.put(returnVal)
+            self.q0.task_done()
+            # done = time.perf_counter() - start
+            # print("done in: ",done)
 
 
 class Conv2dConnection(AbstractConnection):
