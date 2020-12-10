@@ -983,7 +983,7 @@ class ThreadManager:
         while True:
             task = self.q0.get()
             taskType = task["type"]
-            items = list(task["items"])
+            items = task["items"]
             if taskType == "computeInputs":
                 start_idx = items[0][0]
                 end_idx = items[0][1]
@@ -993,7 +993,7 @@ class ThreadManager:
                 cols_per_thread = items[4]
                 t_spikes  = s
                 t_weights = w[:,start_idx:end_idx]
-                result = t_spikes @ t_weights + b[start_idx:end_idx]
+                result = torch.tensor(t_spikes) @ torch.tensor(t_weights) + torch.tensor(b[start_idx:end_idx])
                 returnVal = ((start_idx,end_idx),result)
                 self.q1.put(returnVal)
                 self.q0.task_done()
