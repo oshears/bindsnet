@@ -196,7 +196,7 @@ class Connection(AbstractConnection):
             spikes = s.float().view(s.size(0), -1)
 
             post = None
-            if s.is_cuda():
+            if s.is_cuda:
                 post = torch.zeros((s.shape[0],self.w.shape[1]),device=torch.device("cuda"))
             else:
                 post = torch.zeros((s.shape[0],self.w.shape[1]))
