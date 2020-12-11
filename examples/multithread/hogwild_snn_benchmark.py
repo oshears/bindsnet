@@ -84,7 +84,7 @@ def main(device,n_threads,batch_size,encoding):
     dataset = MNIST( encoder, None, root=os.path.join(".", "data", "MNIST"), download=True, transform=transforms.Compose( [transforms.ToTensor(), transforms.Lambda(lambda x: x * 128)] ),)
 
     # create a dataloader to iterate over and batch the training data
-    train_dataloader = DataLoader( dataset, batch_size=batch_size, shuffle=True, num_workers=16, pin_memory=True, )
+    train_dataloader = DataLoader( dataset, batch_size=batch_size, shuffle=True, pin_memory=True, )
 
     
 
@@ -93,8 +93,8 @@ def main(device,n_threads,batch_size,encoding):
 
     start = timeModule.perf_counter()
     for step, batch in enumerate(train_dataloader):
-        if step == 10:
-            continue
+        if step == 10000:
+           break
 
         # get next input sample and send to the GPU if using CUDA
         inputs = {"X": batch["encoded_image"]}
