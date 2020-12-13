@@ -1,0 +1,108 @@
+Device: gpu   Threads: 0   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 0   Batch Size: 32   Encoding: rate   Execution Time: 1.298822724726051
+Device: gpu   Threads: 1   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 1   Batch Size: 32   Encoding: rate   Execution Time: 1.6619864320382476
+Device: gpu   Threads: 2   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 2   Batch Size: 32   Encoding: rate   Execution Time: 1.6847815047949553
+Device: gpu   Threads: 3   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 3   Batch Size: 32   Encoding: rate   Execution Time: 1.7379843490198255
+Device: gpu   Threads: 4   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 4   Batch Size: 32   Encoding: rate   Execution Time: 1.5594306741841137
+Device: gpu   Threads: 5   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 5   Batch Size: 32   Encoding: rate   Execution Time: 1.767862444743514
+Device: gpu   Threads: 6   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 6   Batch Size: 32   Encoding: rate   Execution Time: 1.6246017972007394
+Device: gpu   Threads: 7   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 7   Batch Size: 32   Encoding: rate   Execution Time: 1.650407307781279
+Device: gpu   Threads: 8   Batch Size: 32   Encoding: rate
+Device: gpu   Threads: 8   Batch Size: 32   Encoding: rate   Execution Time: 1.679198115132749
+Device: gpu   Threads: 0   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 0   Batch Size: 64   Encoding: rate   Execution Time: 1.047719893977046
+Device: gpu   Threads: 1   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 1   Batch Size: 64   Encoding: rate   Execution Time: 1.105407944880426
+Device: gpu   Threads: 2   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 2   Batch Size: 64   Encoding: rate   Execution Time: 1.4258793597109616
+Device: gpu   Threads: 3   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 3   Batch Size: 64   Encoding: rate   Execution Time: 1.4855802357196808
+Device: gpu   Threads: 4   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 4   Batch Size: 64   Encoding: rate   Execution Time: 1.4690789789892733
+Device: gpu   Threads: 5   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 5   Batch Size: 64   Encoding: rate   Execution Time: 1.4400454037822783
+Device: gpu   Threads: 6   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 6   Batch Size: 64   Encoding: rate   Execution Time: 1.322857621125877
+Device: gpu   Threads: 7   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 7   Batch Size: 64   Encoding: rate   Execution Time: 1.3853960079140961
+Device: gpu   Threads: 8   Batch Size: 64   Encoding: rate
+Device: gpu   Threads: 8   Batch Size: 64   Encoding: rate   Execution Time: 1.4767861030995846
+Device: gpu   Threads: 0   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 0   Batch Size: 128   Encoding: rate   Execution Time: 1.861356717068702
+Device: gpu   Threads: 1   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 1   Batch Size: 128   Encoding: rate   Execution Time: 1.5692883497104049
+Device: gpu   Threads: 2   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 2   Batch Size: 128   Encoding: rate   Execution Time: 1.583184527233243
+Device: gpu   Threads: 3   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 3   Batch Size: 128   Encoding: rate   Execution Time: 1.8170885271392763
+Device: gpu   Threads: 4   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 4   Batch Size: 128   Encoding: rate   Execution Time: 1.7970421267673373
+Device: gpu   Threads: 5   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 5   Batch Size: 128   Encoding: rate   Execution Time: 1.555964870378375
+Device: gpu   Threads: 6   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 6   Batch Size: 128   Encoding: rate   Execution Time: 1.452926928177476
+Device: gpu   Threads: 7   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 7   Batch Size: 128   Encoding: rate   Execution Time: 1.7548362100496888
+Device: gpu   Threads: 8   Batch Size: 128   Encoding: rate
+Device: gpu   Threads: 8   Batch Size: 128   Encoding: rate   Execution Time: 1.6981153208762407
+Device: gpu   Threads: 0   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 0   Batch Size: 32   Encoding: temporal   Execution Time: 6.738933256827295
+Device: gpu   Threads: 1   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 1   Batch Size: 32   Encoding: temporal   Execution Time: 7.323737342841923
+Device: gpu   Threads: 2   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 2   Batch Size: 32   Encoding: temporal   Execution Time: 6.067974561825395
+Device: gpu   Threads: 3   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 3   Batch Size: 32   Encoding: temporal   Execution Time: 6.583357312250882
+Device: gpu   Threads: 4   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 4   Batch Size: 32   Encoding: temporal   Execution Time: 6.667983140330762
+Device: gpu   Threads: 5   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 5   Batch Size: 32   Encoding: temporal   Execution Time: 7.043381078634411
+Device: gpu   Threads: 6   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 6   Batch Size: 32   Encoding: temporal   Execution Time: 7.673321390058845
+Device: gpu   Threads: 7   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 7   Batch Size: 32   Encoding: temporal   Execution Time: 7.317681266926229
+Device: gpu   Threads: 8   Batch Size: 32   Encoding: temporal
+Device: gpu   Threads: 8   Batch Size: 32   Encoding: temporal   Execution Time: 6.870119418017566
+Device: gpu   Threads: 0   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 0   Batch Size: 64   Encoding: temporal   Execution Time: 12.708868789020926
+Device: gpu   Threads: 1   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 1   Batch Size: 64   Encoding: temporal   Execution Time: 13.235163818113506
+Device: gpu   Threads: 2   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 2   Batch Size: 64   Encoding: temporal   Execution Time: 12.73627869412303
+Device: gpu   Threads: 3   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 3   Batch Size: 64   Encoding: temporal   Execution Time: 13.112625635694712
+Device: gpu   Threads: 4   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 4   Batch Size: 64   Encoding: temporal   Execution Time: 10.709219668060541
+Device: gpu   Threads: 5   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 5   Batch Size: 64   Encoding: temporal   Execution Time: 12.931463249959052
+Device: gpu   Threads: 6   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 6   Batch Size: 64   Encoding: temporal   Execution Time: 10.689477496780455
+Device: gpu   Threads: 7   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 7   Batch Size: 64   Encoding: temporal   Execution Time: 11.654867936857045
+Device: gpu   Threads: 8   Batch Size: 64   Encoding: temporal
+Device: gpu   Threads: 8   Batch Size: 64   Encoding: temporal   Execution Time: 8.463846053928137
+Device: gpu   Threads: 0   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 0   Batch Size: 128   Encoding: temporal   Execution Time: 15.974848791025579
+Device: gpu   Threads: 1   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 1   Batch Size: 128   Encoding: temporal   Execution Time: 26.084165482316166
+Device: gpu   Threads: 2   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 2   Batch Size: 128   Encoding: temporal   Execution Time: 16.816594762727618
+Device: gpu   Threads: 3   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 3   Batch Size: 128   Encoding: temporal   Execution Time: 14.38058968493715
+Device: gpu   Threads: 4   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 4   Batch Size: 128   Encoding: temporal   Execution Time: 13.186205089092255
+Device: gpu   Threads: 5   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 5   Batch Size: 128   Encoding: temporal   Execution Time: 20.52363718720153
+Device: gpu   Threads: 6   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 6   Batch Size: 128   Encoding: temporal   Execution Time: 17.814830993767828
+Device: gpu   Threads: 7   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 7   Batch Size: 128   Encoding: temporal   Execution Time: 17.168900106102228
+Device: gpu   Threads: 8   Batch Size: 128   Encoding: temporal
+Device: gpu   Threads: 8   Batch Size: 128   Encoding: temporal   Execution Time: 19.311750369146466

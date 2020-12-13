@@ -2,8 +2,8 @@ import tempfile
 from typing import Dict, Optional, Type, Iterable
 
 import torch
-import torch.multiprocessing as mp
 import threading
+from multiprocessing.pool import ThreadPool
 import queue
 
 from .monitors import AbstractMonitor
@@ -122,10 +122,10 @@ class Network(torch.nn.Module):
 
         self.n_threads = n_threads
         if n_threads > 0:
-            self.threads = []
-            self.job_queue = queue.Queue()
             self.response_queue = queue.Queue()
-            self.threadManager = ThreadManager(os.cpu_count())
+            #self.threadManager = ThreadManager(os.cpu_count())
+            self.threadPool = ThreadPool(n_threads)
+        
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
@@ -356,7 +356,7 @@ class Network(torch.nn.Module):
                 if self.n_threads == 0:
                     current_inputs.update(self._get_inputs())
                 else:
-                    current_inputs.update(self._get_inputs_threaded2())
+                    current_inputs.update(self._get_inputs_threadManager())
             
             for l in self.layers:
                 # Update each layer of nodes.
@@ -463,7 +463,7 @@ class Network(torch.nn.Module):
             threads[0].join()
             del threads[0]
 
-    def asyncRun(
+    def runThreaded(
         self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, n_threads=1, **kwargs
     ) -> None:
         # language=rst
@@ -635,14 +635,18 @@ class Network(torch.nn.Module):
         c.update(
             mask=masks.get(c, None), learning=self.learning, **kwargs
         )
+        self.response_queue.put(True)
 
     def _monitor_record(self,m):
         m.record()
+        self.response_queue.put(True)
 
     def _connection_normalize(self,c):
         c.normalize()
+        self.response_queue.put(True)
 
     def _layer_evaluation(self,l,layer,inputs,t,injects_v,clamps,unclamps):
+        print("Thread workig on layer",l)
         # Update each layer of nodes.
         layer.forward(x=inputs)
 
@@ -670,15 +674,10 @@ class Network(torch.nn.Module):
             else:
                 layer.v += inject_v[t]
 
-    def startThreads(self,n_threads):
-        # start up threads
-        self.threads = []
-        for i in range(n_threads):
-            t = threading.Thread(target=self._threadTask,args=(i,self.job_queue),daemon=True)
-            t.start()
-            self.threads.append(t)
-        
-    def asyncRun2(
+        print("Layer done:",l)
+        self.response_queue.put(True)
+
+    def runThreadPool(
         self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
     ) -> None:
         # language=rst
@@ -783,9 +782,157 @@ class Network(torch.nn.Module):
             # Get input to all layers (synchronous mode).
             current_inputs = {}
             if not one_step:
-                # current_inputs.update(self._get_inputs())
-                # current_inputs.update(self._get_inputs_threaded())
-                current_inputs.update(self._get_inputs_threaded2())
+                current_inputs.update(self._get_inputs())
+
+            # run node layer updates
+            for l in self.layers:
+                if l in inputs:
+                    if l in current_inputs:
+                        current_inputs[l] += inputs[l][t]
+                    else:
+                        current_inputs[l] = inputs[l][t]
+
+                if one_step:
+                    # Get input to this layer (one-step mode).
+                    current_inputs.update(self._get_inputs(layers=[l]))
+
+                layer_inputs = current_inputs[l] if (l in current_inputs) else torch.zeros(self.layers[l].s.shape)
+                self.threadPool.apply_async(self._layer_evaluation,args=(l,self.layers[l],layer_inputs,t,injects_v,clamps,unclamps,))
+            
+            for l in self.layers:
+                self.response_queue.get()
+                self.response_queue.task_done()
+
+            # Run synapse updates.
+            for c in self.connections:
+                self.threadPool.apply_async(self._connection_update,args=(self.connections[c],masks,kwargs,))
+            
+            for c in self.connections:
+                self.response_queue.get()
+                self.response_queue.task_done()
+
+            # Get input to all layers.
+            # OYS 11/28/20 is this necessary? Seems like it gets negated upon the next loop
+            # current_inputs.update(self._get_inputs())
+
+            # Record state variables of interest.
+            for m in self.monitors:
+                self.threadPool.apply_async(self._monitor_record,args=(self.monitors[m],))
+            
+            for m in self.monitors:
+                self.response_queue.get()
+                self.response_queue.task_done()
+
+        # Re-normalize connections.
+        for c in self.connections:
+            self.connections[c].normalize()
+
+    def runThreadManager(
+        self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Simulate network for given inputs and time.
+
+        :param inputs: Dictionary of ``Tensor``s of shape ``[time, *input_shape]`` or
+                      ``[time, batch_size, *input_shape]``.
+        :param time: Simulation time.
+        :param one_step: Whether to run the network in "feed-forward" mode, where inputs
+            propagate all the way through the network in a single simulation time step.
+            Layers are updated in the order they are added to the network.
+
+        Keyword arguments:
+
+        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if
+            neurons should be clamped to spiking. The ``Tensor``s have shape
+            ``[n_neurons]`` or ``[time, n_neurons]``.
+        :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks
+            if neurons should be clamped to not spiking. The ``Tensor``s should have
+            shape ``[n_neurons]`` or ``[time, n_neurons]``.
+        :param Dict[str, torch.Tensor] injects_v: Mapping of layer names to boolean
+            masks if neurons should be added voltage. The ``Tensor``s should have shape
+            ``[n_neurons]`` or ``[time, n_neurons]``.
+        :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated
+            learning.
+        :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to
+            boolean masks determining which weights to clamp to zero.
+
+        **Example:**
+
+        .. code-block:: python
+
+            import torch
+            import matplotlib.pyplot as plt
+
+            from bindsnet.network import Network
+            from bindsnet.network.nodes import Input
+            from bindsnet.network.monitors import Monitor
+
+            # Build simple network.
+            network = Network()
+            network.add_layer(Input(500), name='I')
+            network.add_monitor(Monitor(network.layers['I'], state_vars=['s']), 'I')
+
+            # Generate spikes by running Bernoulli trials on Uniform(0, 0.5) samples.
+            spikes = torch.bernoulli(0.5 * torch.rand(500, 500))
+
+            # Run network simulation.
+            network.run(inputs={'I' : spikes}, time=500)
+
+            # Look at input spiking activity.
+            spikes = network.monitors['I'].get('s')
+            plt.matshow(spikes, cmap='binary')
+            plt.xticks(()); plt.yticks(());
+            plt.xlabel('Time'); plt.ylabel('Neuron index')
+            plt.title('Input spiking')
+            plt.show()
+        """
+        # Parse keyword arguments.
+        clamps = kwargs.get("clamp", {})
+        unclamps = kwargs.get("unclamp", {})
+        masks = kwargs.get("masks", {})
+        injects_v = kwargs.get("injects_v", {})
+
+        # Compute reward.
+        if self.reward_fn is not None:
+            kwargs["reward"] = self.reward_fn.compute(**kwargs)
+
+        # Dynamic setting of batch size.
+        if inputs != {}:
+            for key in inputs:
+                # goal shape is [time, batch, n_0, ...]
+                if len(inputs[key].size()) == 1:
+                    # current shape is [n_0, ...]
+                    # unsqueeze twice to make [1, 1, n_0, ...]
+                    inputs[key] = inputs[key].unsqueeze(0).unsqueeze(0)
+                elif len(inputs[key].size()) == 2:
+                    # current shape is [time, n_0, ...]
+                    # unsqueeze dim 1 so that we have
+                    # [time, 1, n_0, ...]
+                    inputs[key] = inputs[key].unsqueeze(1)
+
+            for key in inputs:
+                # batch dimension is 1, grab this and use for batch size
+                if inputs[key].size(1) != self.batch_size:
+                    self.batch_size = inputs[key].size(1)
+
+                    for l in self.layers:
+                        self.layers[l].set_batch_size(self.batch_size)
+
+                    for m in self.monitors:
+                        self.monitors[m].reset_state_variables()
+
+                break
+
+        # Effective number of timesteps.
+        timesteps = int(time / self.dt)
+
+        # Simulate network activity for `time` timesteps.
+        for t in range(timesteps):
+            # Get input to all layers (synchronous mode).
+            current_inputs = {}
+            if not one_step:
+                current_inputs.update(self._get_inputs_threadManager())
             
             for l in self.layers:
                 # Update each layer of nodes.
@@ -800,15 +947,13 @@ class Network(torch.nn.Module):
                     current_inputs.update(self._get_inputs(layers=[l]))
 
                 if l in current_inputs:
-                    # self.layers[l].forward(x=current_inputs[l])
                     self.threadManager.q0.put({"type":"forward","items":(self.layers[l],current_inputs[l])})
-                    # self.layers[l].forward(x=current_inputs[l])
                 else:
                     self.threadManager.q0.put({"type":"forward","items":(self.layers[l],torch.zeros(self.layers[l].s.shape))})
-                    #self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
 
-                self.threadManager.q0.join()
+            self.threadManager.q0.join()
 
+            for l in self.layers:
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
                 if clamp is not None:
@@ -836,15 +981,8 @@ class Network(torch.nn.Module):
             # Run synapse updates.
             for c in self.connections:
                 self.threadManager.q0.put({"type":"connectionUpdate","items":(self.connections[c],masks.get(c, None),self.learning)})
-                # self.connections[c].update(
-                #     mask=masks.get(c, None), learning=self.learning, **kwargs
-                # )
             
             self.threadManager.q0.join()
-
-            # Get input to all layers.
-            # OYS 11/28/20 is this necessary? Seems like it gets negated upon the next loop
-            #current_inputs.update(self._get_inputs())
 
             # Record state variables of interest.
             for m in self.monitors:
@@ -854,7 +992,7 @@ class Network(torch.nn.Module):
         for c in self.connections:
             self.connections[c].normalize()
 
-    def _get_inputs_threaded(self, layers: Iterable = None) -> Dict[str, torch.Tensor]:
+    def _get_inputs_threadPool(self, layers: Iterable = None) -> Dict[str, torch.Tensor]:
         # language=rst
         """
         Fetches outputs from network layers to use as input to downstream layers.
@@ -880,24 +1018,15 @@ class Network(torch.nn.Module):
                     )
 
                 # Add to input: source's spikes multiplied by connection weights.
-                #inputs[c[1]] += self.connections[c].compute(source.s)
-            
-                item = {}
-                item["task"] = "compute"
-                item["c"] = self.connections[c]
-                item["s"] = source.s
-                item["c[1]"] = c[1]
-                self.job_queue.put(item)
+                self.threadPool.apply_async(self.connections[c].compute,args=(source.s,None,self.response_queue,))
 
-        self.job_queue.join()
-        
-        while not self.response_queue.empty():
-            item = self.response_queue.get()
-            inputs[item["c[1]"]] += item["result"]
+        for c in self.connections:
+            if c[1] in layers:
+                self.response_queue.get()
 
         return inputs
 
-    def _get_inputs_threaded2(self, layers: Iterable = None) -> Dict[str, torch.Tensor]:
+    def _get_inputs_threadManager(self, layers: Iterable = None) -> Dict[str, torch.Tensor]:
         # language=rst
         """
         Fetches outputs from network layers to use as input to downstream layers.
@@ -929,83 +1058,68 @@ class Network(torch.nn.Module):
         return inputs
 
 
-    def _threadTask(self,i,job_queue):
-        while True:
-            item = job_queue.get()
-            if item["task"] == "terminate":
-                return
-            elif item["task"] == "compute":
-                c = item["c"]
-                s = item["s"]
-                c1 = item["c[1]"]
-                result = {"result":c.compute(s),"c[1]":item["c[1]"]}
-                self.response_queue.put(result)
-                job_queue.task_done()
-            elif item["task"] == "layer":
-                l = item["l"]
-                layer = item["layer"]
-                inputs = item["inputs"]
-                t = item["t"]
-                injects_v = item["injects_v"]
-                clamps = item["clamps"]
-                unclamps = item["unclamps"]
-                self._layer_evaluation(l,layer,inputs,t,injects_v,clamps,unclamps)
-                job_queue.task_done()
-            elif item["task"] == "connection":
-                c = item["c"]
-                masks = item["masks"]
-                kwargs = item["kwargs"]
-                self._connection_update(c,masks,kwargs)
-                job_queue.task_done()
-            elif item["task"] == "monitor":
-                m = item["m"]
-                self._monitor_record(m)
-                job_queue.task_done()
-            elif item["task"] == "normalize":
-                c = item["c"]
-                self._connection_normalize(c)
-                job_queue.task_done()
 
+# Custom class to assign tasks to threads
 class ThreadManager:
     def __init__(self,n_threads):
+
+        # number of threads to be used
         self.n_threads = n_threads
 
+        # the job queue
         self.q0 = queue.Queue()
+
+        # the response queue
         self.q1 = queue.Queue()
 
+        # keep track of threads in a list
         self.threads = []
-        for i in range(n_threads):
-            t = threading.Thread(target=self._threadCompute,args=(i,),daemon=True)
+        for _ in range(n_threads):
+            # create and start the threads
+            t = threading.Thread(target=self._threadCompute,daemon=True)
             t.start()
             self.threads.append(t)
 
-    def _threadCompute(self,i):
+    # Thread Manager threads worker logic
+    def _threadCompute(self):
         while True:
+            # get a task from the job queue
             task = self.q0.get()
+
+            # get the task type and data
             taskType = task["type"]
             items = task["items"]
+
+            # thread should compute the synapse outputs
             if taskType == "computeInputs":
+                # collect the data and perform matrix multiplication on the partial tensor
                 start_idx = int(items[0][0])
                 end_idx = int(items[0][1])
                 s = items[1]
                 w = items[2]
                 b = items[3]
-                cols_per_thread = items[4]
                 t_spikes  = s
                 t_weights = w[:,start_idx:end_idx]
                 result = t_spikes @ t_weights + b[start_idx:end_idx]
                 returnVal = ((start_idx,end_idx),result)
+
+                # store the results in the response queue for the Connection object to reuse
                 self.q1.put(returnVal)
                 self.q0.task_done()
+
+            # thread should compute the layer output
             elif taskType == "forward":
+                # collect data and call the layer object's forward method
                 layer = items[0]
                 inputs = items[1]
                 layer.forward(inputs)
                 self.q0.task_done()
+
+            # thread should update the synapse weights
             elif taskType == "connectionUpdate":
+                # collect data and call the connection object's update method
                 c = items[0]
                 mask = items[1]
                 learning = items[2]
-                # kwargs = items[2]
                 c.update( mask=mask, learning=learning)
                 self.q0.task_done()

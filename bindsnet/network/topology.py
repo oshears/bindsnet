@@ -168,7 +168,8 @@ class Connection(AbstractConnection):
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(kwargs.get("b", torch.zeros(target.n)), requires_grad=False)
 
-    def compute(self, s: torch.Tensor, threadManager = None) -> torch.Tensor:
+    # Osaze Shears: Added threadManager and response_queue for ECE 5510 project
+    def compute(self, s: torch.Tensor, threadManager = None, response_queue = None) -> torch.Tensor:
         # language=rst
         """
         Compute pre-activations given spikes using connection weights.
@@ -177,42 +178,66 @@ class Connection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
                  decaying spike activation).
         """
+
+        # if threadManager is not specified, perform the standard synapse computation
         if(threadManager is None):
-            # Compute multiplication of spike activations by weights and add bias.
-            # start = time.perf_counter()
+            
             post = s.float().view(s.size(0), -1) @ self.w + self.b
-            # done = time.perf_counter() - start
-            # print("done in: ",done)
+            
+            # if a response queue was specificed, indicate that this operation was completed
+            if response_queue is not None:
+                response_queue.put(True)
+
             return post.view(s.size(0), *self.target.shape)
 
-        # start = time.perf_counter()
         else:
 
-            #number of threads to kick off
+            # number of threads to kick off
             n_neurons = self.w.shape[1]
             cols_per_thread = int(n_neurons / threadManager.n_threads)
 
-            #spikes
+            # reshape the batch of spike data
             spikes = s.float().view(s.size(0), -1)
 
+            # create the new output tensor, use cuda if available
             post = None
             if s.is_cuda:
                 post = torch.zeros((s.shape[0],self.w.shape[1]),device=torch.device("cuda"))
             else:
                 post = torch.zeros((s.shape[0],self.w.shape[1]))
 
+            # add a new task to the job queue for the number of specified threads
             for i in range(threadManager.n_threads):
+
+                # determine the start and end indexes of each thread's matrix section
                 start_idx = i*cols_per_thread
                 end_idx = (i+1)*cols_per_thread if i != threadManager.n_threads - 1 else n_neurons
+                
+                # create the item to be added to the queue
                 items = ((start_idx,end_idx),spikes,self.w,self.b,cols_per_thread)
+                
+                # add the item to the threadManager's job queue
                 threadManager.q0.put({"type":"computeInputs","items":items})
 
+            # for the number of threads that were initialized
             for i in range(threadManager.n_threads):
+
+                # get the responses from the threadManager's response queue (q1)
                 items = threadManager.q1.get()
+
+                # retrieve the start index
                 start_idx = items[0][0]
+
+                # retrieve the end index
                 end_idx = items[0][1]
+
+                # retrieve the tensor result
                 result = items[1]
+
+                # update the output tensor at the specified indexes with result
                 post[:,start_idx:end_idx] = result
+
+                # indicate that the task has been completed
                 threadManager.q1.task_done()
 
 
