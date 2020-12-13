@@ -8,6 +8,9 @@
 * cProfile
 * snakeviz
 
+# BindsNET Changes Overview
+To add multithreading to BindsNET, we modified the `network.py` and `topology.py` files. These modifications are explained in the following sections.
+
 # `network.py`
 
 ## \_\_init\_\_()
@@ -70,13 +73,57 @@ The `Connection` object was slightly modified to work with the `Network`'s `Thre
 # `snn_benchmark.py`
 # `hogwild_snn_benchmark.py`
 # `CNN_test.py`
+This file is not directly used; however, this is part of the test process for the CNN. This python file contains two methods, the one needed to test the accurasy of the trained architecture is the `test`method.
+
+## test_epoch()
+This is the method that tests a single epoch of the CNN. It is responsible for the performing the forward propagation and calculating the accurasy of the epoch.
+
+## test()
+A wrapper method which loads the test dataset and then calls the `test_epoch`
+
 # `CNN_train.py`
+This file contains the methods used for training the CNN. The main method needed for training is the `train` method.
+
+## train_epoch()
+This is the method that trains a single epoch of the CNN. It is responsible for performing both the forward and back propagation then prints the status of the CNN after these operations have been performed.
+
+## train()
+This is a wrapper method which loads the training dataset and then calls the `train_epoch` method.
+
+
 # `CNN_main.py`
+This is the main python file used to benchmark the MNIST dataset. Currently, this only benchmarks the training as this was the focus of the experiment. This file defines the CNN architecture and determines if only the CPUs or CUDA (GPU) and CPUs are utilized. This is where the multiprocessing functionality has been added. The file will output the execution time for all 6000 MNIST examples to be trained. Because one MNIST example translates to one complete forward and back propagation, the throughput is calculated via `execution time for all training sample` / 6000.
+
+## Command Line Arguments
+`--num-processes` is an integer which specifies the thread count. The default value is 2.
+
+`--cuda` is a boolean value which specifies whether the CUDA (GPU) given by a value of `True` or only the CPUs will be used given by a value of `False`. The default value is `False`.
+
+`--batch-size` is an integer which specifies the size of the batch used in training. The default value is 64.
+
+`--epochs` is an integer value which specifies the number of epochs or complete runs the training of the dataset will go through. The default value is 1.The experiment performed used the default value.
+
+`--test-batch-size` is an integer value which specifies the size of the batch used for testing. The default value is 1. This is not used in the current implementation of the code because testing the CNN is not taking place. The experiment performed used the default value.
+
+`--lr` is a floating point value which specifies the training learning rate. The default value is 0.01. The experiment performed used the default value.
+
+`--momentum` is a floating point value which specifies the Stochastic Gradient Descent (optimizer) momentum. The default value is 0.5. The experiment performed used the default value.
+
+`--seed` is an integer value which specifies the seed value used in the training process (and if being calculated the testing process). The default value is 1. The seed value was randomly choosen in this experiment.
+
+`--log-interval` is an integer whch defines how many batches to wait before logging training status. The default value is 10. This is not used in this experiment.
+
+`--dry-run` is a boolean value which tells the Python script to, in a single pass, perform a quick quality check. The default value is `False`. The experiment performed used the default value.
 
 # Running the Code
 
 ## CNN MNIST Benchmark
+This file was used to debug and benchmark CNNs with varying thread count, GPU vs CPU implementation, and varying batch size.
 
+Usage:
+```
+python CNN_main.py --num-processes <int> --cuda <True | False> --batch-size <int>
+```
 
 
 ## SNN MNIST Benchmark
