@@ -28,12 +28,12 @@ from bindsnet.analysis.plotting import (
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
-parser.add_argument("--batch_size", type=int, default=32)
+parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_train", type=int, default=60000)
 parser.add_argument("--n_workers", type=int, default=-1)
-parser.add_argument("--update_steps", type=int, default=256)
+parser.add_argument("--update_steps", type=int, default=10)
 # parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
 parser.add_argument("--theta_plus", type=float, default=0.05)
@@ -102,6 +102,7 @@ network = DiehlAndCook2015v2(
     nu=(1e-4, 1e-2),
     theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
+    batch_size=batch_size
 )
 
 # Directs network to GPU
@@ -293,6 +294,8 @@ for epoch in range(n_epochs):
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
+
+network.save(f"d&c_v2_{batch_size}_network.pt")
 
 # Load MNIST data.
 test_dataset = MNIST(
